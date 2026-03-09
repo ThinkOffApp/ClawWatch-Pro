@@ -116,6 +116,16 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
+                    <Button
+                        android:id="@+id/refreshRoomButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:backgroundTint="#1E293B"
+                        android:text="Refresh room"
+                        android:textAllCaps="false"
+                        android:textColor="#CBD5E1" />
+
                     <HorizontalScrollView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -287,7 +297,7 @@
                         android:layout_marginTop="10dp"
                         android:background="#0F172A"
                         android:padding="14dp"
-                        android:text="Rooms list, invites, and public discovery port next."
+                        android:text="Rooms list, invites, and public discovery port next. The pinned private room will open back into the Room tab."
                         android:textColor="#CBD5E1"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -336,9 +346,58 @@
                         android:layout_marginTop="18dp"
                         android:background="#0F172A"
                         android:padding="14dp"
-                        android:text="Watch dashboard shell ready. Pairing, sync, AI settings, and diagnostics port next."
+                        android:text="Configure the Ant Farm room connection here first so the Room tab can load live messages."
                         android:textColor="#CBD5E1"
                         android:textSize="15sp" />
+
+                    <EditText
+                        android:id="@+id/antFarmKeyInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="#0F172A"
+                        android:hint="Ant Farm agent key"
+                        android:inputType="textPassword"
+                        android:padding="14dp"
+                        android:textColor="#CBD5E1"
+                        android:textColorHint="#64748B" />
+
+                    <EditText
+                        android:id="@+id/antFarmRoomInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="#0F172A"
+                        android:hint="Default room slug"
+                        android:padding="14dp"
+                        android:textColor="#CBD5E1"
+                        android:textColorHint="#64748B" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/saveWatchSettingsButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="#38BDF8"
+                            android:text="Save settings"
+                            android:textAllCaps="false"
+                            android:textColor="#0F172A" />
+
+                        <Button
+                            android:id="@+id/loadRoomNowButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:backgroundTint="#1E293B"
+                            android:text="Load room now"
+                            android:textAllCaps="false"
+                            android:textColor="#CBD5E1" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>

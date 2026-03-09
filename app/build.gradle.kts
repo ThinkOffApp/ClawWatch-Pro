@@ -50,21 +50,12 @@ android {
 }
 
 dependencies {
-    // Wear OS
-    implementation(libs.wear)
-    implementation(libs.wear.input)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.security.crypto)
 
-    // Material (FAB)
     implementation("com.google.android.material:material:1.12.0")
-
-    // AppCompat
     implementation("androidx.appcompat:appcompat:1.7.0")
-
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-
-    // Vosk STT (offline speech recognition)
     implementation(libs.vosk.android)
 }
