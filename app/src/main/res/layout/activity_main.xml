@@ -1,151 +1,330 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.wear.widget.BoxInsetLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="#0B1020"
+    android:orientation="vertical">
 
-    <!-- SPLASH: shown on startup while initialising -->
     <LinearLayout
-        android:id="@+id/splashPanel"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#10182D"
         android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="visible">
-
-        <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:src="@mipmap/ic_launcher"
-            android:contentDescription="ClawWatch"
-            android:scaleType="fitCenter" />
+        android:paddingStart="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp">
 
         <TextView
+            android:id="@+id/headerEyebrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ClawWatch"
-            android:textColor="#D4A5E9"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp" />
-
-        <ProgressBar
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginTop="12dp" />
-
-    </LinearLayout>
-
-    <!-- SETUP PANEL: shown when no API key -->
-    <LinearLayout
-        android:id="@+id/setupPanel"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="16dp"
-        android:visibility="gone">
-
-        <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@mipmap/ic_launcher"
-            android:scaleType="fitCenter"
-            android:layout_marginBottom="8dp" />
+            android:text="ClawWatch Pro"
+            android:textAllCaps="true"
+            android:textColor="#7DD3FC"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/headerTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Run set_key.sh\nfrom your Mac"
-            android:textColor="#D4A5E9"
-            android:textSize="12sp"
-            android:gravity="center" />
-
-        <EditText
-            android:id="@+id/apiKeyInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="sk-ant-..."
-            android:textColor="#FFFFFF"
-            android:textColorHint="#666666"
-            android:textSize="11sp"
-            android:inputType="textPassword"
             android:layout_marginTop="8dp"
-            android:visibility="gone" />
+            android:text="Your ClawWatch room"
+            android:textColor="#F8FAFC"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/headerSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Private room first. Rooms and watch controls stay one tap away."
+            android:textColor="#94A3B8"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ScrollView
+            android:id="@+id/roomPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#141D33"
+                    android:elevation="2dp"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Default Private Room"
+                        android:textColor="#F8FAFC"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Streaming ThinkOff chat UI ports here next."
+                        android:textColor="#94A3B8"
+                        android:textSize="13sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            android:background="#0F172A"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ClawWatch"
+                                android:textColor="#7DD3FC"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Family room summary, watch actions, and agent messages live here."
+                                android:textColor="#E2E8F0"
+                                android:textSize="15sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="36dp"
+                            android:background="#1E293B"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="You"
+                                android:textColor="#F8FAFC"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="How is the family doing?"
+                                android:textColor="#E2E8F0"
+                                android:textSize="15sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <EditText
+                            android:id="@+id/composerInput"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="#0F172A"
+                            android:enabled="false"
+                            android:hint="Composer shell ready"
+                            android:padding="14dp"
+                            android:textColor="#CBD5E1"
+                            android:textColorHint="#64748B" />
+
+                        <Button
+                            android:id="@+id/sendButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:backgroundTint="#38BDF8"
+                            android:enabled="false"
+                            android:text="Send"
+                            android:textColor="#0F172A" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView
+            android:id="@+id/roomsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#141D33"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Rooms"
+                        android:textColor="#F8FAFC"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Pinned private room first, then joined rooms and invites."
+                        android:textColor="#94A3B8"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:background="#0F172A"
+                        android:padding="14dp"
+                        android:text="★ My ClawWatch room"
+                        android:textColor="#E2E8F0"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="#0F172A"
+                        android:padding="14dp"
+                        android:text="Rooms list, invites, and public discovery port next."
+                        android:textColor="#CBD5E1"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView
+            android:id="@+id/watchPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#141D33"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Watch"
+                        android:textColor="#F8FAFC"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Connection status, sync, model, avatar, voice, and diagnostics."
+                        android:textColor="#94A3B8"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:background="#0F172A"
+                        android:padding="14dp"
+                        android:text="Watch dashboard shell ready. Pairing, sync, AI settings, and diagnostics port next."
+                        android:textColor="#CBD5E1"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#10182D"
+        android:elevation="8dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="14dp">
 
         <Button
-            android:id="@+id/saveKeyBtn"
-            android:layout_width="wrap_content"
+            android:id="@+id/tabRoom"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Save"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="#D4A5E9"
-            android:visibility="gone" />
-
-    </LinearLayout>
-
-    <!-- MAIN PANEL: shown after setup -->
-    <LinearLayout
-        android:id="@+id/mainPanel"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="12dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Starting…"
-            android:textColor="#888888"
-            android:textSize="11sp"
-            android:gravity="center"
-            android:maxLines="1" />
-
-        <TextView
-            android:id="@+id/queryText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#CCCCCC"
-            android:textSize="11sp"
-            android:gravity="center"
-            android:maxLines="2"
-            android:layout_marginTop="4dp" />
-
-        <ProgressBar
-            android:id="@+id/thinkingIndicator"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginTop="4dp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/responseText"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
             android:layout_weight="1"
-            android:text=""
-            android:textColor="#D4A5E9"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:maxLines="5"
-            android:layout_marginTop="4dp" />
+            android:backgroundTint="#38BDF8"
+            android:text="Room"
+            android:textColor="#0F172A" />
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/tabRooms"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:contentDescription="Tap to talk"
-            app:srcCompat="@android:drawable/ic_btn_speak_now"
-            app:backgroundTint="#D4A5E9"
-            app:fabSize="mini" />
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:backgroundTint="#1E293B"
+            android:text="Rooms"
+            android:textColor="#CBD5E1" />
 
+        <Button
+            android:id="@+id/tabWatch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:backgroundTint="#1E293B"
+            android:text="Watch"
+            android:textColor="#CBD5E1" />
     </LinearLayout>
 
-</androidx.wear.widget.BoxInsetLayout>
+</LinearLayout>

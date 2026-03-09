@@ -1,44 +1,31 @@
 package com.thinkoff.clawwatch
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.thinkoff.clawwatch.databinding.ActivityMainBinding
-import kotlinx.coroutines.launch
 
-/**
- * Main Wear OS activity.
- *
- * States:
- *   SETUP     → no API key yet, show key entry
- *   IDLE      → tap mic to start
- *   LISTENING → Vosk capturing speech, partial shown
- *   THINKING  → NullClaw + Opus 4.6 running
- *   SPEAKING  → Android TTS playing response
- */
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        private const val TAG = "ClawWatch"
-    }
-
     private lateinit var binding: ActivityMainBinding
-    private lateinit var clawRunner: ClawRunner
-    private lateinit var voiceEngine: VoiceEngine
 
-    private enum class State { SETUP, IDLE, LISTENING, THINKING, SPEAKING }
-    private var state = State.SETUP
-
-    private val requestMic = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) startListening() else setStatus("Mic permission needed")
+    private enum class Tab(
+        val title: String,
+        val subtitle: String
+    ) {
+        ROOM(
+            title = "Your ClawWatch room",
+            subtitle = "Private room first. Rooms and watch controls stay one tap away."
+        ),
+        ROOMS(
+            title = "Rooms and invites",
+            subtitle = "Your private room stays pinned, with joined rooms and discovery underneath."
+        ),
+        WATCH(
+            title = "Watch dashboard",
+            subtitle = "Pairing, sync, avatar, voice, diagnostics, and future billing live here."
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,134 +33,34 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        clawRunner = ClawRunner(this)
-        voiceEngine = VoiceEngine(this)
+        binding.tabRoom.setOnClickListener { showTab(Tab.ROOM) }
+        binding.tabRooms.setOnClickListener { showTab(Tab.ROOMS) }
+        binding.tabWatch.setOnClickListener { showTab(Tab.WATCH) }
 
-        binding.fab.setOnClickListener { onFabTapped() }
-        binding.saveKeyBtn.setOnClickListener { onSaveKey() }
-
-        lifecycleScope.launch { initialise() }
+        showTab(Tab.ROOM)
     }
 
-    private suspend fun initialise() {
-        setStatus("Starting…")
-        clawRunner.ensureInstalled()
-        voiceEngine.initTts()
+    private fun showTab(tab: Tab) {
+        binding.headerTitle.text = tab.title
+        binding.headerSubtitle.text = tab.subtitle
 
-        // Fix #4: block in SETUP state so tap does nothing until key is set
-        if (!clawRunner.hasApiKey()) {
-            setState(State.SETUP)
-            setStatus("No key — run set_key.sh")
-            return
-        }
+        binding.roomPanel.alpha = if (tab == Tab.ROOM) 1f else 0f
+        binding.roomsPanel.alpha = if (tab == Tab.ROOMS) 1f else 0f
+        binding.watchPanel.alpha = if (tab == Tab.WATCH) 1f else 0f
 
-        voiceEngine.initVosk(
-            onReady = {
-                setState(State.IDLE)
-                setStatus("Tap to talk")
-            },
-            onError = { err ->
-                Log.w(TAG, "Vosk not ready: $err")
-                setState(State.IDLE)
-                setStatus("Tap to talk")
-            }
-        )
+        binding.roomPanel.visibility = if (tab == Tab.ROOM) android.view.View.VISIBLE else android.view.View.GONE
+        binding.roomsPanel.visibility = if (tab == Tab.ROOMS) android.view.View.VISIBLE else android.view.View.GONE
+        binding.watchPanel.visibility = if (tab == Tab.WATCH) android.view.View.VISIBLE else android.view.View.GONE
+
+        styleTab(binding.tabRoom, active = tab == Tab.ROOM)
+        styleTab(binding.tabRooms, active = tab == Tab.ROOMS)
+        styleTab(binding.tabWatch, active = tab == Tab.WATCH)
     }
 
-    private fun onSaveKey() { /* key set via ADB, not on-watch */ }
-
-    private fun onFabTapped() {
-        when (state) {
-            State.SETUP -> { /* handled by save button */ }
-            State.IDLE -> {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                    == PackageManager.PERMISSION_GRANTED
-                ) startListening()
-                else requestMic.launch(Manifest.permission.RECORD_AUDIO)
-            }
-            State.LISTENING -> {
-                voiceEngine.stopListening()
-                setState(State.IDLE)
-                setStatus("Tap to talk")
-            }
-            State.THINKING, State.SPEAKING -> {
-                voiceEngine.stopSpeaking()
-                setState(State.IDLE)
-                setStatus("Tap to talk")
-            }
-        }
-    }
-
-    private fun startListening() {
-        setState(State.LISTENING)
-        setStatus("Listening…")
-        voiceEngine.startListening(
-            onResult = { text ->
-                runOnUiThread {
-                    voiceEngine.stopListening()
-                    binding.queryText.text = "\u201c$text\u201d"
-                    askClaw(text)
-                }
-            },
-            onPartial = { partial ->
-                runOnUiThread { setStatus(partial) }
-            }
-        )
-    }
-
-    private fun askClaw(prompt: String) {
-        setState(State.THINKING)
-        setStatus("Opus 4.6 thinking…")
-
-        lifecycleScope.launch {
-            val result = clawRunner.query(prompt)
-            result.fold(
-                onSuccess = { response ->
-                    binding.responseText.text = response
-                    setState(State.SPEAKING)
-                    setStatus("Speaking…")
-                    // Fix #6: use UtteranceProgressListener.onDone() not heuristic delay
-                    voiceEngine.speak(response) {
-                        runOnUiThread {
-                            if (state == State.SPEAKING) {
-                                setState(State.IDLE)
-                                setStatus("Tap to talk")
-                            }
-                        }
-                    }
-                },
-                onFailure = { err ->
-                    val msg = err.message ?: "Error"
-                    setStatus(msg)
-                    voiceEngine.speak("Sorry, $msg")
-                    setState(State.IDLE)
-                }
-            )
-        }
-    }
-
-    private fun setState(s: State) {
-        state = s
-        runOnUiThread {
-            binding.splashPanel.visibility = View.GONE
-            binding.setupPanel.visibility  = if (s == State.SETUP)    View.VISIBLE else View.GONE
-            binding.mainPanel.visibility   = if (s != State.SETUP)    View.VISIBLE else View.GONE
-            binding.thinkingIndicator.visibility =
-                if (s == State.THINKING) View.VISIBLE else View.GONE
-            binding.fab.contentDescription = when (s) {
-                State.IDLE      -> "Tap to talk"
-                State.LISTENING -> "Tap to stop"
-                State.THINKING  -> "Thinking"
-                State.SPEAKING  -> "Tap to stop"
-                State.SETUP     -> ""
-            }
-        }
-    }
-
-    private fun setStatus(msg: String) = runOnUiThread { binding.statusText.text = msg }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        voiceEngine.release()
+    private fun styleTab(button: Button, active: Boolean) {
+        val background = if (active) R.color.tab_active else R.color.tab_inactive
+        val foreground = if (active) R.color.tab_active_text else R.color.tab_inactive_text
+        button.backgroundTintList = ContextCompat.getColorStateList(this, background)
+        button.setTextColor(ContextCompat.getColor(this, foreground))
     }
 }

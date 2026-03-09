@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="tab_active">#38BDF8</color>
+    <color name="tab_active_text">#0F172A</color>
+    <color name="tab_inactive">#1E293B</color>
+    <color name="tab_inactive_text">#CBD5E1</color>
+</resources>
