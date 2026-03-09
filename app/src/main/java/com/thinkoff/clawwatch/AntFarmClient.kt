@@ -39,43 +39,47 @@ class AntFarmClient(
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     setRequestProperty("Accept", "application/json")
-                    setRequestProperty("Authorization", "Bearer $apiKey")
+                    setRequestProperty("X-API-Key", apiKey)
                     connectTimeout = 15_000
                     readTimeout = 15_000
                 }
 
-                val responseCode = conn.responseCode
-                val responseBody = readBody(conn)
-                if (responseCode != 200) {
-                    throw IllegalStateException("Room fetch failed ($responseCode): ${responseBody.take(180)}")
-                }
-
-                val json = JSONObject(responseBody)
-                val roomName = json.optString("room_name", room)
-                val items = json.optJSONArray("messages") ?: JSONArray()
-                val messages = buildList {
-                    for (i in 0 until items.length()) {
-                        val item = items.optJSONObject(i) ?: continue
-                        val body = item.optString("body", "").trim()
-                        if (body.isBlank()) continue
-                        add(
-                            AntFarmMessage(
-                                id = item.optString("id", "msg-$i"),
-                                from = item.optString("from", "unknown"),
-                                body = body,
-                                createdAt = item.optString("created_at", ""),
-                                isHuman = item.optBoolean("isHuman", false)
-                            )
-                        )
+                try {
+                    val responseCode = conn.responseCode
+                    val responseBody = readBody(conn)
+                    if (responseCode != 200) {
+                        throw IllegalStateException("Room fetch failed ($responseCode): ${responseBody.take(180)}")
                     }
-                }.asReversed()
 
-                Log.i(TAG, "Fetched ${messages.size} messages for $room")
-                AntFarmRoomFeed(
-                    roomSlug = json.optString("room", room),
-                    roomName = roomName,
-                    messages = messages
-                )
+                    val json = JSONObject(responseBody)
+                    val roomName = json.optString("room_name", room)
+                    val items = json.optJSONArray("messages") ?: JSONArray()
+                    val messages = buildList {
+                        for (i in 0 until items.length()) {
+                            val item = items.optJSONObject(i) ?: continue
+                            val body = item.optString("body", "").trim()
+                            if (body.isBlank()) continue
+                            add(
+                                AntFarmMessage(
+                                    id = item.optString("id", "msg-$i"),
+                                    from = item.optString("from", "unknown"),
+                                    body = body,
+                                    createdAt = item.optString("created_at", ""),
+                                    isHuman = item.optBoolean("isHuman", false)
+                                )
+                            )
+                        }
+                    }.asReversed()
+
+                    Log.i(TAG, "Fetched ${messages.size} messages for $room")
+                    AntFarmRoomFeed(
+                        roomSlug = json.optString("room", room),
+                        roomName = roomName,
+                        messages = messages
+                    )
+                } finally {
+                    conn.disconnect()
+                }
             }
         }
 
@@ -88,25 +92,29 @@ class AntFarmClient(
                     requestMethod = "POST"
                     setRequestProperty("Content-Type", "application/json")
                     setRequestProperty("Accept", "application/json")
-                    setRequestProperty("Authorization", "Bearer $apiKey")
+                    setRequestProperty("X-API-Key", apiKey)
                     connectTimeout = 15_000
                     readTimeout = 15_000
                     doOutput = true
                 }
 
-                val payload = JSONObject().apply {
-                    put("body", body)
-                }.toString()
-                OutputStreamWriter(conn.outputStream).use { it.write(payload) }
+                try {
+                    val payload = JSONObject().apply {
+                        put("body", body)
+                    }.toString()
+                    OutputStreamWriter(conn.outputStream).use { it.write(payload) }
 
-                val responseCode = conn.responseCode
-                val responseBody = readBody(conn)
-                if (responseCode !in 200..299) {
-                    throw IllegalStateException("Send failed ($responseCode): ${responseBody.take(180)}")
+                    val responseCode = conn.responseCode
+                    val responseBody = readBody(conn)
+                    if (responseCode !in 200..299) {
+                        throw IllegalStateException("Send failed ($responseCode): ${responseBody.take(180)}")
+                    }
+
+                    Log.i(TAG, "Sent room message to $room")
+                    Unit
+                } finally {
+                    conn.disconnect()
                 }
-
-                Log.i(TAG, "Sent room message to $room")
-                Unit
             }
         }
 
