@@ -71,77 +71,134 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Default Private Room"
-                        android:textColor="#F8FAFC"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_weight="1">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="My ClawWatch Room"
+                                android:textColor="#F8FAFC"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/roomStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Watch online • synced 2m ago • family room pinned"
+                                android:textColor="#94A3B8"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/roomPresenceChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="#0F172A"
+                            android:paddingStart="10dp"
+                            android:paddingTop="6dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="6dp"
+                            android:text="Live"
+                            android:textColor="#7DD3FC"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Streaming ThinkOff chat UI ports here next."
-                        android:textColor="#94A3B8"
-                        android:textSize="13sp" />
+                        android:layout_marginTop="16dp"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <Button
+                                android:id="@+id/actionCheckWatch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:backgroundTint="#38BDF8"
+                                android:text="Check on watch"
+                                android:textAllCaps="false"
+                                android:textColor="#0F172A" />
+
+                            <Button
+                                android:id="@+id/actionSummarizeFamily"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:backgroundTint="#1E293B"
+                                android:text="Summarize family"
+                                android:textAllCaps="false"
+                                android:textColor="#CBD5E1" />
+
+                            <Button
+                                android:id="@+id/actionOpenScratchpad"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:backgroundTint="#1E293B"
+                                android:text="Open scratchpad"
+                                android:textAllCaps="false"
+                                android:textColor="#CBD5E1" />
+
+                            <Button
+                                android:id="@+id/actionInviteSomeone"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:backgroundTint="#1E293B"
+                                android:text="Invite someone"
+                                android:textAllCaps="false"
+                                android:textColor="#CBD5E1" />
+                        </LinearLayout>
+                    </HorizontalScrollView>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="vertical">
+                        android:background="#0F172A"
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                        <LinearLayout
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Conversation"
+                            android:textColor="#F8FAFC"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/roomHint"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp"
-                            android:background="#0F172A"
-                            android:orientation="vertical"
-                            android:padding="14dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="ClawWatch"
-                                android:textColor="#7DD3FC"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="Family room summary, watch actions, and agent messages live here."
-                                android:textColor="#E2E8F0"
-                                android:textSize="15sp" />
-                        </LinearLayout>
+                            android:layout_marginTop="4dp"
+                            android:text="Chat-first shell using ThinkOff message rhythm and composer behavior."
+                            android:textColor="#94A3B8"
+                            android:textSize="13sp" />
 
                         <LinearLayout
+                            android:id="@+id/messagesContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="36dp"
-                            android:background="#1E293B"
-                            android:orientation="vertical"
-                            android:padding="14dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="You"
-                                android:textColor="#F8FAFC"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="How is the family doing?"
-                                android:textColor="#E2E8F0"
-                                android:textSize="15sp" />
-                        </LinearLayout>
+                            android:layout_marginTop="16dp"
+                            android:orientation="vertical" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -157,8 +214,10 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:background="#0F172A"
-                            android:enabled="false"
-                            android:hint="Composer shell ready"
+                            android:hint="Message your ClawWatch room..."
+                            android:inputType="textMultiLine|textCapSentences"
+                            android:minLines="2"
+                            android:maxLines="4"
                             android:padding="14dp"
                             android:textColor="#CBD5E1"
                             android:textColorHint="#64748B" />
@@ -169,7 +228,6 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:backgroundTint="#38BDF8"
-                            android:enabled="false"
                             android:text="Send"
                             android:textColor="#0F172A" />
                     </LinearLayout>

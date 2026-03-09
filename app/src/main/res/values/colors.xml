@@ -4,4 +4,9 @@
     <color name="tab_active_text">#0F172A</color>
     <color name="tab_inactive">#1E293B</color>
     <color name="tab_inactive_text">#CBD5E1</color>
+    <color name="agent_bubble">#0F172A</color>
+    <color name="user_bubble">#1E293B</color>
+    <color name="agent_author">#7DD3FC</color>
+    <color name="user_author">#F8FAFC</color>
+    <color name="message_body">#E2E8F0</color>
 </resources>
