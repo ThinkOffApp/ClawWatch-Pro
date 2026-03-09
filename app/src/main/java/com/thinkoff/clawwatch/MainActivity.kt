@@ -1,21 +1,22 @@
 package com.thinkoff.clawwatch
 
 import android.content.SharedPreferences
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputType
-import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.thinkoff.clawwatch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,8 +30,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private val antFarmClient = AntFarmClient()
     private val roomMessages = mutableListOf<LocalMessage>()
+    private lateinit var messageAdapter: RoomMessageAdapter
     private var activeRoomSlug: String = DEFAULT_ROOM
-    private var activeRoomName: String = "Your ClawWatch room"
+    private var activeRoomName: String = "Room"
+    private val localTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val isoTimeFormat = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
     private enum class Tab(
         val title: String,
@@ -50,17 +54,17 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private data class LocalMessage(
-        val author: String,
-        val body: String,
-        val isUser: Boolean
-    )
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         prefs = SecurePrefs.companion(this)
+        messageAdapter = RoomMessageAdapter(roomMessages)
+
+        binding.recyclerView.layoutManager = LinearLayoutManager(this).apply {
+            stackFromEnd = true
+        }
+        binding.recyclerView.adapter = messageAdapter
 
         binding.tabRoom.setOnClickListener { showTab(Tab.ROOM) }
         binding.tabRooms.setOnClickListener { showTab(Tab.ROOMS) }
@@ -139,6 +143,7 @@ class MainActivity : AppCompatActivity() {
         roomMessages += LocalMessage(
             author = "ClawWatch",
             body = "Add your Ant Farm agent key and room in the Watch tab, then load the room here.",
+            timestamp = nowTime(),
             isUser = false
         )
         binding.roomHint.text = "Room connection not configured yet."
@@ -156,7 +161,7 @@ class MainActivity : AppCompatActivity() {
                 else -> ""
             }
         )
-        binding.composerInput.setSelection(binding.composerInput.text.length)
+        binding.composerInput.text?.let { binding.composerInput.setSelection(it.length) }
         sendComposerMessage()
     }
 
@@ -189,6 +194,7 @@ class MainActivity : AppCompatActivity() {
                         LocalMessage(
                             author = it.from,
                             body = it.body,
+                            timestamp = formatTimestamp(it.createdAt),
                             isUser = false
                         )
                     }
@@ -196,6 +202,7 @@ class MainActivity : AppCompatActivity() {
                         roomMessages += LocalMessage(
                             author = "ClawWatch",
                             body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
+                            timestamp = nowTime(),
                             isUser = false
                         )
                     }
@@ -207,6 +214,7 @@ class MainActivity : AppCompatActivity() {
                     roomMessages += LocalMessage(
                         author = "ClawWatch",
                         body = "Room load failed: ${error.message ?: "unknown error"}",
+                        timestamp = nowTime(),
                         isUser = false
                     )
                     binding.roomStatus.text = "Connection failed for $room"
@@ -225,12 +233,12 @@ class MainActivity : AppCompatActivity() {
         val apiKey = getAntFarmKey()
         val room = getConfiguredRoom()
         if (apiKey.isNullOrBlank()) {
-            roomMessages += LocalMessage("ClawWatch", "Set the Ant Farm key first in the Watch tab.", false)
+            roomMessages += LocalMessage("ClawWatch", "Set the Ant Farm key first in the Watch tab.", nowTime(), false)
             renderRoomMessages()
             return
         }
 
-        roomMessages += LocalMessage(author = "You", body = message, isUser = true)
+        roomMessages += LocalMessage(author = "You", body = message, timestamp = nowTime(), isUser = true)
         binding.composerInput.text?.clear()
         renderRoomMessages()
         setRoomLoadingState(loading = true, message = "Sending…")
@@ -244,6 +252,7 @@ class MainActivity : AppCompatActivity() {
                     roomMessages += LocalMessage(
                         author = "ClawWatch",
                         body = "Send failed: ${error.message ?: "unknown error"}",
+                        timestamp = nowTime(),
                         isUser = false
                     )
                     setRoomLoadingState(loading = false, message = "Send failed")
@@ -253,12 +262,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderRoomMessages() {
-        binding.messagesContainer.removeAllViews()
-        roomMessages.forEachIndexed { index, message ->
-            binding.messagesContainer.addView(buildMessageBubble(message, index))
-        }
-        binding.roomPanel.post {
-            binding.roomPanel.fullScroll(View.FOCUS_DOWN)
+        messageAdapter.notifyDataSetChanged()
+        if (roomMessages.isNotEmpty()) {
+            binding.recyclerView.post {
+                binding.recyclerView.scrollToPosition(roomMessages.size - 1)
+            }
         }
     }
 
@@ -270,67 +278,6 @@ class MainActivity : AppCompatActivity() {
         if (loading) {
             binding.roomPresenceChip.text = "Syncing"
         }
-    }
-
-    private fun buildMessageBubble(message: LocalMessage, index: Int): View {
-        val wrapper = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            params.topMargin = if (index == 0) 0 else dp(12)
-            layoutParams = params
-            gravity = if (message.isUser) Gravity.END else Gravity.START
-        }
-
-        val bubble = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
-                setColor(
-                    ContextCompat.getColor(
-                        this@MainActivity,
-                        if (message.isUser) R.color.user_bubble else R.color.agent_bubble
-                    )
-                )
-            }
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            layoutParams = LinearLayout.LayoutParams(
-                (resources.displayMetrics.widthPixels * 0.78f).toInt(),
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val authorView = TextView(this).apply {
-            text = message.author
-            setTextColor(
-                ContextCompat.getColor(
-                    this@MainActivity,
-                    if (message.isUser) R.color.user_author else R.color.agent_author
-                )
-            )
-            setTypeface(typeface, Typeface.BOLD)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-        }
-
-        val bodyView = TextView(this).apply {
-            text = message.body
-            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.message_body))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            setLineSpacing(0f, 1.18f)
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            params.topMargin = dp(6)
-            layoutParams = params
-        }
-
-        bubble.addView(authorView)
-        bubble.addView(bodyView)
-        wrapper.addView(bubble)
-        return wrapper
     }
 
     private fun hasRoomConfig(): Boolean = !getAntFarmKey().isNullOrBlank()
@@ -345,10 +292,10 @@ class MainActivity : AppCompatActivity() {
             .firstOrNull { it.isNotBlank() }
             ?: DEFAULT_ROOM
 
-    private fun dp(value: Int): Int =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value.toFloat(),
-            resources.displayMetrics
-        ).toInt()
+    private fun nowTime(): String = localTimeFormat.format(Date())
+
+    private fun formatTimestamp(value: String): String {
+        if (value.isBlank()) return nowTime()
+        return runCatching { isoTimeFormat.format(Instant.parse(value)) }.getOrElse { value.take(16) }
+    }
 }

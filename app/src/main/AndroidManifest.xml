@@ -8,7 +8,7 @@
         android:label="ClawWatch Pro"
         android:icon="@mipmap/ic_launcher"
         android:extractNativeLibs="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
+        android:theme="@style/Theme.ClawWatchPro">
 
         <activity
             android:name=".MainActivity"
