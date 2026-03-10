@@ -14,7 +14,9 @@ object SecurePrefs {
     private val MIGRATION_KEYS = setOf(
         "anthropic_api_key",
         "antfarm_api_key",
-        "antfarm_rooms"
+        "antfarm_rooms",
+        "local_model_base_url",
+        "local_model_name"
     )
 
     @Volatile
