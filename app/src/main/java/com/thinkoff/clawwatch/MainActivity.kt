@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.Button
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -25,7 +26,11 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_ANTFARM_ROOMS = "antfarm_rooms"
         private const val PREF_LOCAL_MODEL_BASE_URL = "local_model_base_url"
         private const val PREF_LOCAL_MODEL_NAME = "local_model_name"
+        private const val PREF_HUMAN_EMAIL = "human_email"
+        private const val PREF_HUMAN_DISPLAY_NAME = "human_display_name"
+        private const val PREF_HUMAN_AVATAR_URL = "human_avatar_url"
         private const val DEFAULT_ROOM = "ant-farm-management"
+        private const val DEFAULT_TEST_ANTFARM_KEY = "antfarm_67efac6733223e873ab305e1e48e9c6a3f573eab38d07b00c8eabffd718d0b2b"
         private const val DEFAULT_LOCAL_URL = "http://127.0.0.1:8080"
         private const val DEFAULT_LOCAL_MODEL = "qwen2.5-1.5b-instruct"
         private const val LOCAL_SYSTEM_PROMPT =
@@ -72,6 +77,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
+    private lateinit var googleSignInManager: GoogleSignInManager
     private val antFarmClient = AntFarmClient()
     private val localModelClient = LocalModelClient()
     private val roomMessages = mutableListOf<LocalMessage>()
@@ -82,12 +88,32 @@ class MainActivity : AppCompatActivity() {
     private var activeRoomName: String = RoomMode.ANT_FARM.title
     private val localTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val isoTimeFormat = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+    private val googleSignInLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            googleSignInManager.handleSignInResult(result.data)
+                .onSuccess { user ->
+                    persistSignedInUser(user)
+                    binding.roomStatus.text = "Signed in as ${getCurrentNickname() ?: user.displayName ?: user.email}"
+                    binding.roomPresenceChip.text = "Owner"
+                    binding.roomHint.text = "Owner setup complete. The linked ClawWatch agent can now load the room."
+                    if (isHumanReady()) {
+                        refreshActiveConversation()
+                    }
+                }
+                .onFailure { error ->
+                    binding.roomStatus.text = "Google sign-in failed"
+                    binding.roomPresenceChip.text = "Error"
+                    binding.roomHint.text = error.message ?: "Google sign-in did not complete."
+                    updateOwnerUi()
+                }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         prefs = SecurePrefs.companion(this)
+        googleSignInManager = GoogleSignInManager(this)
         messageAdapter = RoomMessageAdapter(roomMessages)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(this).apply {
@@ -101,6 +127,11 @@ class MainActivity : AppCompatActivity() {
         binding.sendButton.setOnClickListener { sendComposerMessage() }
         binding.refreshRoomButton.setOnClickListener { refreshActiveConversation() }
         binding.saveWatchSettingsButton.setOnClickListener { saveWatchSettings() }
+        binding.googleSignInButton.setOnClickListener {
+            googleSignInLauncher.launch(googleSignInManager.getSignInIntent())
+        }
+        binding.googleSignOutButton.setOnClickListener { signOutOwner() }
+        binding.saveNicknameButton.setOnClickListener { saveNickname() }
         binding.loadRoomNowButton.setOnClickListener {
             activeRoomMode = RoomMode.ANT_FARM
             refreshActiveConversation(switchToRoom = true)
@@ -184,25 +215,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadSavedSettings() {
-        binding.antFarmKeyInput.setText(getAntFarmKey().orEmpty())
+        ensureInternalTestDefaults()
         binding.antFarmRoomInput.setText(getConfiguredRoom())
         binding.localModelBaseUrlInput.setText(getLocalModelBaseUrl())
         binding.localModelNameInput.setText(getLocalModelName())
         activeRoomSlug = getConfiguredRoom()
+        googleSignInManager.getCurrentUser()?.let { persistSignedInUser(it, updateUi = false) }
+        updateOwnerUi()
+    }
+
+    private fun ensureInternalTestDefaults() {
+        val currentKey = prefs.getString(PREF_ANTFARM_KEY, null)?.trim().orEmpty()
+        val currentRooms = prefs.getString(PREF_ANTFARM_ROOMS, null)?.trim().orEmpty()
+        if (currentKey.isNotBlank() && currentRooms.isNotBlank()) return
+
+        prefs.edit().apply {
+            if (currentKey.isBlank()) {
+                putString(PREF_ANTFARM_KEY, DEFAULT_TEST_ANTFARM_KEY)
+            }
+            if (currentRooms.isBlank()) {
+                putString(PREF_ANTFARM_ROOMS, DEFAULT_ROOM)
+            }
+        }.apply()
     }
 
     private fun saveWatchSettings() {
         prefs.edit()
-            .putString(PREF_ANTFARM_KEY, binding.antFarmKeyInput.text?.toString()?.trim().orEmpty())
             .putString(PREF_ANTFARM_ROOMS, binding.antFarmRoomInput.text?.toString()?.trim().orEmpty())
             .putString(PREF_LOCAL_MODEL_BASE_URL, binding.localModelBaseUrlInput.text?.toString()?.trim().orEmpty())
             .putString(PREF_LOCAL_MODEL_NAME, binding.localModelNameInput.text?.toString()?.trim().orEmpty())
             .apply()
 
         activeRoomSlug = getConfiguredRoom()
-        binding.roomStatus.text = "Settings saved"
+        binding.roomStatus.text = if (isHumanReady()) "Settings saved" else "Finish owner setup first"
         binding.roomPresenceChip.text = "Saved"
-        binding.roomHint.text = "Ant Farm and local-Qwen targets are ready to load from the Rooms tab."
+        binding.roomHint.text =
+            if (isHumanReady()) {
+                "Owner setup complete. The room and local-Qwen targets are ready to load from the Rooms tab."
+            } else {
+                "Save the Google owner account and nickname before loading rooms."
+            }
+        updateOwnerUi()
     }
 
     private fun seedInitialMessages() {
@@ -245,17 +298,51 @@ class MainActivity : AppCompatActivity() {
         val apiKey = getAntFarmKey()
         val room = getConfiguredRoom()
 
+        if (!isSignedInWithGoogle()) {
+            activeRoomName = RoomMode.ANT_FARM.title
+            roomMessages.clear()
+            roomMessages += LocalMessage(
+                author = "ClawWatch",
+                body = "Sign in with Google in the Watch tab before loading your ClawWatch room.",
+                timestamp = nowTime(),
+                isUser = false
+            )
+            binding.roomHint.text = "Google sign-in is required before the room can load."
+            binding.roomStatus.text = "Owner setup needed"
+            binding.roomPresenceChip.text = "Setup"
+            applyHeader()
+            renderRoomMessages()
+            return
+        }
+
+        if (!hasNickname()) {
+            activeRoomName = RoomMode.ANT_FARM.title
+            roomMessages.clear()
+            roomMessages += LocalMessage(
+                author = "ClawWatch",
+                body = "Set your nickname in the Watch tab before loading the family room.",
+                timestamp = nowTime(),
+                isUser = false
+            )
+            binding.roomHint.text = "Finish nickname setup to continue as this room owner."
+            binding.roomStatus.text = "Nickname needed"
+            binding.roomPresenceChip.text = "Setup"
+            applyHeader()
+            renderRoomMessages()
+            return
+        }
+
         if (apiKey.isNullOrBlank()) {
             activeRoomName = RoomMode.ANT_FARM.title
             roomMessages.clear()
             roomMessages += LocalMessage(
                 author = "ClawWatch",
-                body = "Set the Ant Farm key first in the Watch tab, then load the room again.",
+                body = "The internal ClawWatch room transport is missing. Reload the app and try again.",
                 timestamp = nowTime(),
                 isUser = false
             )
-            binding.roomHint.text = "Ant Farm connection not configured yet."
-            binding.roomStatus.text = "Setup needed • add key + room in Watch"
+            binding.roomHint.text = "The hidden ClawWatch agent transport is not configured."
+            binding.roomStatus.text = "Transport missing"
             binding.roomPresenceChip.text = "Setup"
             applyHeader()
             renderRoomMessages()
@@ -270,7 +357,8 @@ class MainActivity : AppCompatActivity() {
                     activeRoomName = feed.roomName
                     binding.roomStatus.text = "Connected • ${feed.roomSlug} • ${feed.messages.size} messages"
                     binding.roomPresenceChip.text = "Live"
-                    binding.roomHint.text = "Real Ant Farm room timeline loaded through the agent-key API."
+                    binding.roomHint.text =
+                        "Signed in as ${getCurrentNickname()} • the linked ClawWatch agent is carrying room traffic underneath."
 
                     roomMessages.clear()
                     roomMessages += feed.messages.map {
@@ -304,7 +392,7 @@ class MainActivity : AppCompatActivity() {
                     )
                     binding.roomStatus.text = "Connection failed for $room"
                     binding.roomPresenceChip.text = "Error"
-                    binding.roomHint.text = "Check the Ant Farm key and room slug in the Watch tab."
+                    binding.roomHint.text = "Check the saved room slug and try again."
                     applyHeader()
                     renderRoomMessages()
                     setRoomLoadingState(loading = false, message = "Load failed")
@@ -344,13 +432,28 @@ class MainActivity : AppCompatActivity() {
     private fun sendAntFarmMessage(message: String) {
         val apiKey = getAntFarmKey()
         val room = getConfiguredRoom()
+        if (!isHumanReady()) {
+            roomMessages += LocalMessage(
+                "ClawWatch",
+                "Finish Google sign-in and nickname setup in the Watch tab before sending room messages.",
+                nowTime(),
+                false
+            )
+            renderRoomMessages()
+            return
+        }
         if (apiKey.isNullOrBlank()) {
-            roomMessages += LocalMessage("ClawWatch", "Set the Ant Farm key first in the Watch tab.", nowTime(), false)
+            roomMessages += LocalMessage("ClawWatch", "The internal ClawWatch transport is missing. Reload the app and try again.", nowTime(), false)
             renderRoomMessages()
             return
         }
 
-        roomMessages += LocalMessage(author = "You", body = message, timestamp = nowTime(), isUser = true)
+        roomMessages += LocalMessage(
+            author = getCurrentNickname() ?: "You",
+            body = message,
+            timestamp = nowTime(),
+            isUser = true
+        )
         binding.composerInput.text?.clear()
         renderRoomMessages()
         setRoomLoadingState(loading = true, message = "Sending…")
@@ -422,7 +525,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setRoomLoadingState(loading: Boolean, message: String) {
         binding.refreshRoomButton.isEnabled = !loading
-        binding.sendButton.isEnabled = !loading
+        binding.sendButton.isEnabled = !loading && isHumanReady()
         binding.loadRoomNowButton.isEnabled = !loading
         binding.openAntFarmRoomButton.isEnabled = !loading
         binding.openLocalQwenButton.isEnabled = !loading
@@ -433,6 +536,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hasRoomConfig(): Boolean = !getAntFarmKey().isNullOrBlank()
+
+    private fun isSignedInWithGoogle(): Boolean = !getOwnerEmail().isNullOrBlank()
+
+    private fun hasNickname(): Boolean = !getCurrentNickname().isNullOrBlank()
+
+    private fun isHumanReady(): Boolean = isSignedInWithGoogle() && hasNickname()
 
     private fun getAntFarmKey(): String? =
         prefs.getString(PREF_ANTFARM_KEY, null)?.takeIf { it.isNotBlank() }
@@ -455,6 +564,113 @@ class MainActivity : AppCompatActivity() {
             ?.trim()
             ?.ifBlank { DEFAULT_LOCAL_MODEL }
             ?: DEFAULT_LOCAL_MODEL
+
+    private fun getOwnerEmail(): String? =
+        prefs.getString(PREF_HUMAN_EMAIL, null)?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun getOwnerDisplayName(): String? =
+        prefs.getString(PREF_HUMAN_DISPLAY_NAME, null)?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun getNicknameKey(email: String): String {
+        val normalized = email.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "_").trim('_')
+        return "human_nickname_$normalized"
+    }
+
+    private fun getCurrentNickname(): String? {
+        val email = getOwnerEmail() ?: return null
+        return prefs.getString(getNicknameKey(email), null)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun persistSignedInUser(user: SignedInGoogleUser, updateUi: Boolean = true) {
+        prefs.edit()
+            .putString(PREF_HUMAN_EMAIL, user.email)
+            .putString(PREF_HUMAN_DISPLAY_NAME, user.displayName)
+            .putString(PREF_HUMAN_AVATAR_URL, user.avatarUrl)
+            .apply()
+
+        if (updateUi) {
+            updateOwnerUi()
+        }
+    }
+
+    private fun saveNickname() {
+        val email = getOwnerEmail()
+        if (email.isNullOrBlank()) {
+            binding.roomStatus.text = "Sign in with Google first"
+            binding.roomPresenceChip.text = "Setup"
+            return
+        }
+
+        val nickname = binding.nicknameInput.text?.toString()?.trim().orEmpty()
+        if (nickname.isBlank()) {
+            binding.nicknameSummary.text = "Nickname cannot be blank."
+            binding.nicknameInput.requestFocus()
+            return
+        }
+
+        prefs.edit().putString(getNicknameKey(email), nickname).apply()
+        binding.roomStatus.text = "Owner ready • $nickname"
+        binding.roomPresenceChip.text = "Owner"
+        binding.roomHint.text = "Signed in as $nickname. The room can now load through the linked ClawWatch agent."
+        updateOwnerUi()
+
+        if (hasRoomConfig()) {
+            refreshActiveConversation()
+        }
+    }
+
+    private fun signOutOwner() {
+        googleSignInManager.signOut()
+        prefs.edit()
+            .remove(PREF_HUMAN_EMAIL)
+            .remove(PREF_HUMAN_DISPLAY_NAME)
+            .remove(PREF_HUMAN_AVATAR_URL)
+            .apply()
+        binding.nicknameInput.text?.clear()
+        updateOwnerUi()
+        binding.roomStatus.text = "Signed out"
+        binding.roomPresenceChip.text = "Setup"
+        binding.roomHint.text = "Sign in with Google in the Watch tab to use the room as the ClawWatch owner."
+    }
+
+    private fun updateOwnerUi() {
+        val email = getOwnerEmail()
+        val displayName = getOwnerDisplayName()
+        val nickname = getCurrentNickname()
+        val signedIn = !email.isNullOrBlank()
+
+        binding.googleAuthEmail.text =
+            if (signedIn) {
+                listOfNotNull(displayName, email).distinct().joinToString("\n")
+            } else {
+                "Not signed in"
+            }
+
+        binding.googleAuthSummary.text =
+            if (!signedIn) {
+                "Sign in with Google to claim this ClawWatch companion and unlock your human profile setup."
+            } else if (nickname.isNullOrBlank()) {
+                "This Google account is connected. Pick the nickname ClawWatch should use for it."
+            } else {
+                "Signed in as $nickname. Room access is ready for this owner."
+            }
+
+        binding.googleSignInButton.visibility = if (signedIn) View.GONE else View.VISIBLE
+        binding.googleSignOutButton.visibility = if (signedIn) View.VISIBLE else View.GONE
+        binding.nicknameCard.visibility = if (signedIn) View.VISIBLE else View.GONE
+        binding.nicknameInput.setText(nickname.orEmpty())
+        binding.nicknameSummary.text =
+            if (!signedIn) {
+                "Sign in first to choose the nickname this account should use in ClawWatch."
+            } else if (nickname.isNullOrBlank()) {
+                "Set the nickname this account should use in ClawWatch."
+            } else {
+                "Current nickname: $nickname"
+            }
+
+        binding.sendButton.isEnabled = isHumanReady()
+        binding.loadRoomNowButton.isEnabled = isHumanReady()
+    }
 
     private fun nowTime(): String = localTimeFormat.format(Date())
 

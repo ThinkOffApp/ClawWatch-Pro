@@ -8,6 +8,7 @@ activity = "1.9.0"
 coroutines = "1.8.1"
 vosk = "0.3.47"
 securityCrypto = "1.1.0-alpha06"
+googlePlayServicesAuth = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -17,6 +18,7 @@ androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", ve
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googlePlayServicesAuth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
