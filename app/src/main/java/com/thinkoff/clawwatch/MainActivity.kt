@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.thinkoff.clawwatch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -82,6 +83,8 @@ class MainActivity : AppCompatActivity() {
     private val localModelClient = LocalModelClient()
     private val roomMessages = mutableListOf<LocalMessage>()
     private lateinit var messageAdapter: RoomMessageAdapter
+    private lateinit var roomLayoutManager: LinearLayoutManager
+    private var autoScrollEnabled = true
     private var activeTab: Tab = Tab.ROOM
     private var activeRoomMode: RoomMode = RoomMode.ANT_FARM
     private var activeRoomSlug: String = DEFAULT_ROOM
@@ -116,10 +119,22 @@ class MainActivity : AppCompatActivity() {
         googleSignInManager = GoogleSignInManager(this)
         messageAdapter = RoomMessageAdapter(roomMessages)
 
-        binding.recyclerView.layoutManager = LinearLayoutManager(this).apply {
+        roomLayoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
         }
+        binding.recyclerView.layoutManager = roomLayoutManager
         binding.recyclerView.adapter = messageAdapter
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                autoScrollEnabled = isNearBottom()
+                updateScrollToBottomFab()
+            }
+        })
+        binding.scrollToBottomFab.setOnClickListener {
+            autoScrollEnabled = true
+            scrollToBottom(smooth = true)
+        }
 
         binding.tabRoom.setOnClickListener { showTab(Tab.ROOM) }
         binding.tabRooms.setOnClickListener { showTab(Tab.ROOMS) }
@@ -156,7 +171,7 @@ class MainActivity : AppCompatActivity() {
 
         loadSavedSettings()
         seedInitialMessages()
-        renderRoomMessages()
+        renderRoomMessages(forceScroll = true)
         showTab(Tab.ROOM)
 
         if (hasRoomConfig()) {
@@ -311,7 +326,7 @@ class MainActivity : AppCompatActivity() {
             binding.roomStatus.text = "Owner setup needed"
             binding.roomPresenceChip.text = "Setup"
             applyHeader()
-            renderRoomMessages()
+            renderRoomMessages(forceScroll = true)
             return
         }
 
@@ -328,7 +343,7 @@ class MainActivity : AppCompatActivity() {
             binding.roomStatus.text = "Nickname needed"
             binding.roomPresenceChip.text = "Setup"
             applyHeader()
-            renderRoomMessages()
+            renderRoomMessages(forceScroll = true)
             return
         }
 
@@ -345,7 +360,7 @@ class MainActivity : AppCompatActivity() {
             binding.roomStatus.text = "Transport missing"
             binding.roomPresenceChip.text = "Setup"
             applyHeader()
-            renderRoomMessages()
+            renderRoomMessages(forceScroll = true)
             return
         }
 
@@ -378,7 +393,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     applyHeader()
-                    renderRoomMessages()
+                    renderRoomMessages(forceScroll = true)
                     setRoomLoadingState(loading = false, message = "Room live")
                 }
                 .onFailure { error ->
@@ -394,7 +409,7 @@ class MainActivity : AppCompatActivity() {
                     binding.roomPresenceChip.text = "Error"
                     binding.roomHint.text = "Check the saved room slug and try again."
                     applyHeader()
-                    renderRoomMessages()
+                    renderRoomMessages(forceScroll = true)
                     setRoomLoadingState(loading = false, message = "Load failed")
                 }
         }
@@ -415,7 +430,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         applyHeader()
-        renderRoomMessages()
+        renderRoomMessages(forceScroll = true)
         setRoomLoadingState(loading = false, message = "Local room ready")
     }
 
@@ -439,15 +454,16 @@ class MainActivity : AppCompatActivity() {
                 nowTime(),
                 false
             )
-            renderRoomMessages()
+            renderRoomMessages(forceScroll = true)
             return
         }
         if (apiKey.isNullOrBlank()) {
             roomMessages += LocalMessage("ClawWatch", "The internal ClawWatch transport is missing. Reload the app and try again.", nowTime(), false)
-            renderRoomMessages()
+            renderRoomMessages(forceScroll = true)
             return
         }
 
+        autoScrollEnabled = true
         roomMessages += LocalMessage(
             author = getCurrentNickname() ?: "You",
             body = message,
@@ -455,7 +471,7 @@ class MainActivity : AppCompatActivity() {
             isUser = true
         )
         binding.composerInput.text?.clear()
-        renderRoomMessages()
+        renderRoomMessages(forceScroll = true)
         setRoomLoadingState(loading = true, message = "Sending…")
 
         lifecycleScope.launch {
@@ -475,9 +491,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendLocalModelMessage(message: String) {
+        autoScrollEnabled = true
         roomMessages += LocalMessage(author = "You", body = message, timestamp = nowTime(), isUser = true)
         binding.composerInput.text?.clear()
-        renderRoomMessages()
+        renderRoomMessages(forceScroll = true)
         setRoomLoadingState(loading = true, message = "Calling local Qwen…")
 
         lifecycleScope.launch {
@@ -514,13 +531,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderRoomMessages() {
+    private fun renderRoomMessages(forceScroll: Boolean = false) {
         messageAdapter.notifyDataSetChanged()
-        if (roomMessages.isNotEmpty()) {
-            binding.recyclerView.post {
-                binding.recyclerView.scrollToPosition(roomMessages.size - 1)
+        binding.recyclerView.post {
+            if (roomMessages.isNotEmpty() && (forceScroll || autoScrollEnabled)) {
+                scrollToBottom(smooth = roomMessages.size > 1)
+            } else {
+                updateScrollToBottomFab()
             }
         }
+    }
+
+    private fun isNearBottom(threshold: Int = 2): Boolean {
+        val total = messageAdapter.itemCount
+        if (total == 0) return true
+        val lastVisible = roomLayoutManager.findLastVisibleItemPosition()
+        return lastVisible >= total - 1 - threshold
+    }
+
+    private fun updateScrollToBottomFab() {
+        val show = messageAdapter.itemCount > 0 && !isNearBottom()
+        binding.scrollToBottomFab.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    private fun scrollToBottom(smooth: Boolean) {
+        if (messageAdapter.itemCount == 0) {
+            updateScrollToBottomFab()
+            return
+        }
+        val last = messageAdapter.itemCount - 1
+        if (smooth) {
+            binding.recyclerView.smoothScrollToPosition(last)
+        } else {
+            binding.recyclerView.scrollToPosition(last)
+        }
+        updateScrollToBottomFab()
     }
 
     private fun setRoomLoadingState(loading: Boolean, message: String) {
