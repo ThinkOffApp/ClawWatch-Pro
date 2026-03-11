@@ -113,7 +113,9 @@ app.post('/api/watch/alert', (req, res) => {
   const room = String(payload.room || '');
   const prompt = String(payload.prompt || body);
   const target = resolveWatchTarget();
-  if (!target) return res.json({ ok: false, error: 'Watch target not set. Connect watch first.' });
+  if (!target) {
+    return res.status(503).json({ ok: false, error: 'Watch target not set. Connect watch first.' });
+  }
 
   try {
     execFileSync('adb', ['-s', target, ...[
@@ -127,9 +129,9 @@ app.post('/api/watch/alert', (req, res) => {
       '--es', 'alert_prompt', prompt
     ]], { timeout: 8000, encoding: 'utf8' });
 
-    return res.json({ ok: true, dispatched: true, target, event_id: eventId });
+    return res.status(202).json({ ok: true, dispatched: true, target, event_id: eventId });
   } catch (e) {
-    return res.json({ ok: false, error: e.message, target });
+    return res.status(500).json({ ok: false, error: e.message, target });
   }
 });
 
