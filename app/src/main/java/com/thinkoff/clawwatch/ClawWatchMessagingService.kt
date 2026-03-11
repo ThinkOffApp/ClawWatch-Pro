@@ -3,6 +3,10 @@ package com.thinkoff.clawwatch
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class ClawWatchMessagingService : FirebaseMessagingService() {
 
@@ -11,10 +15,17 @@ class ClawWatchMessagingService : FirebaseMessagingService() {
         private const val PREF_REQUIRE_URGENT_TAG = "require_urgent_tag"
     }
 
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         SecurePrefs.watch(this).edit().putString(AlertContract.PREF_LAST_FCM_TOKEN, token).apply()
         Log.i(TAG, "FCM token updated (${token.take(16)}...)")
+        ioScope.launch {
+            WatchPushRegistrar(applicationContext)
+                .syncRegistration(trigger = "onNewToken", force = true, tokenHint = token)
+                .onFailure { Log.w(TAG, "FCM registration sync failed: ${it.message}") }
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {

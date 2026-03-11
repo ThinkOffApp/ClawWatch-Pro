@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+// Enable Firebase resource processing when the app-specific google-services.json is present.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.thinkoff.clawwatch"
     compileSdk = 34
@@ -75,6 +80,7 @@ dependencies {
     implementation(libs.play.services.wearable)
     // Wear OS push notifications (Phase A server-initiated alerts)
     implementation(libs.firebase.messaging)
+    implementation(libs.kotlinx.coroutines.play.services)
     // Encrypted key/config storage on watch
     implementation(libs.security.crypto)
 }

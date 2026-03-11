@@ -127,6 +127,25 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 That's it. Open ClawWatch on the watch.
 
+## Urgent Push Alerts (FCM)
+
+ClawWatch now auto-registers its FCM token to `https://antfarm.world/api/v1/watch/devices` using your configured Ant Farm API key.
+
+Required setup:
+
+1. Add Firebase config for this package:
+```bash
+# Must match applicationId = com.thinkoff.clawwatch
+cp /path/to/your/google-services.json app/google-services.json
+```
+2. In the admin panel, set **Ant Farm API key** so the watch can register itself.
+3. In `antfarm` backend env, set `CLAWWATCH_FCM_SERVER_KEY` (Firebase Cloud Messaging legacy server key).
+
+Behavior:
+- on app start, ClawWatch refreshes/validates token registration
+- on FCM token rotation, ClawWatch re-registers automatically
+- urgent room mentions with `#URGENT @handle` are dispatched to registered watch devices
+
 ## Usage
 
 | Action | Result |

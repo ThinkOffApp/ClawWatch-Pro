@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voiceEngine: VoiceEngine
     private lateinit var dayPhaseManager: DayPhaseManager
     private lateinit var vitalsReader: VitalsReader
+    private lateinit var watchPushRegistrar: WatchPushRegistrar
     private val prefs by lazy { SecurePrefs.watch(this) }
 
     private enum class State { SETUP, IDLE, LISTENING, THINKING, SEARCHING, SPEAKING, ERROR }
@@ -179,6 +180,7 @@ class MainActivity : AppCompatActivity() {
         voiceEngine = VoiceEngine(this)
         dayPhaseManager = DayPhaseManager(this)
         vitalsReader = VitalsReader(this)
+        watchPushRegistrar = WatchPushRegistrar(this)
         
         val prefs = getSharedPreferences("claw_prefs", 0)
         currentAvatarIndex = prefs.getInt("avatar_idx", 0)
@@ -202,6 +204,12 @@ class MainActivity : AppCompatActivity() {
         applyDayPhaseAppearance(dayPhaseManager.snapshotNow())
         ensureNotificationPermission()
         handleAlertOpenIntent(intent)
+
+        lifecycleScope.launch {
+            watchPushRegistrar
+                .syncRegistration(trigger = "app_start")
+                .onFailure { Log.w(TAG, "Push registration sync failed: ${it.message}") }
+        }
 
         lifecycleScope.launch { initialise() }
     }
