@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.thinkoff.clawwatch"
-        minSdk = 30  // Wear OS 3 = API 30
+        minSdk = 30
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
@@ -34,19 +34,6 @@ android {
     buildFeatures {
         viewBinding = true
     }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
-    }
-
-    // Package the nullclaw binary from assets
-    sourceSets {
-        getByName("main") {
-            assets.srcDirs("src/main/assets")
-        }
-    }
 }
 
 dependencies {
@@ -59,5 +46,4 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.vosk.android)
 }

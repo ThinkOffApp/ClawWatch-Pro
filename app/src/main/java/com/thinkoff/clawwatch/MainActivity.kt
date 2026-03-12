@@ -25,17 +25,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PREF_ANTFARM_KEY = "antfarm_api_key"
         private const val PREF_ANTFARM_ROOMS = "antfarm_rooms"
-        private const val PREF_LOCAL_MODEL_BASE_URL = "local_model_base_url"
-        private const val PREF_LOCAL_MODEL_NAME = "local_model_name"
         private const val PREF_HUMAN_EMAIL = "human_email"
         private const val PREF_HUMAN_DISPLAY_NAME = "human_display_name"
         private const val PREF_HUMAN_AVATAR_URL = "human_avatar_url"
         private const val DEFAULT_ROOM = "ant-farm-management"
         private const val DEFAULT_TEST_ANTFARM_KEY = "antfarm_67efac6733223e873ab305e1e48e9c6a3f573eab38d07b00c8eabffd718d0b2b"
-        private const val DEFAULT_LOCAL_URL = "http://127.0.0.1:8080"
-        private const val DEFAULT_LOCAL_MODEL = "qwen2.5-1.5b-instruct"
-        private const val LOCAL_SYSTEM_PROMPT =
-            "You are ClawWatch local Qwen. Keep replies short, direct, and useful for a smartwatch companion."
     }
 
     private enum class Tab(
@@ -44,35 +38,15 @@ class MainActivity : AppCompatActivity() {
     ) {
         ROOM(
             title = "Room",
-            subtitle = "Chat with the selected conversation target."
+            subtitle = "Chat with your live room."
         ),
         ROOMS(
             title = "Rooms",
-            subtitle = "Switch between your live Ant Farm room and a direct local Qwen chat."
+            subtitle = "Choose the room target for chat."
         ),
         WATCH(
-            title = "Watch dashboard",
-            subtitle = "Configure the live room and local model endpoint for testing."
-        )
-    }
-
-    private enum class RoomMode(
-        val title: String,
-        val subtitle: String,
-        val hint: String,
-        val chip: String
-    ) {
-        ANT_FARM(
-            title = "Family room",
-            subtitle = "Live Ant Farm room timeline and messaging.",
-            hint = "Connected room state and message timeline appear here.",
-            chip = "Live room"
-        ),
-        LOCAL_QWEN(
-            title = "1:1 with Qwen",
-            subtitle = "Direct local chat for the phone-hosted model experiment.",
-            hint = "This mode talks to a local OpenAI-compatible endpoint served from the phone.",
-            chip = "Local model"
+            title = "Account",
+            subtitle = "Google sign-in and room setup."
         )
     }
 
@@ -80,15 +54,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private lateinit var googleSignInManager: GoogleSignInManager
     private val antFarmClient = AntFarmClient()
-    private val localModelClient = LocalModelClient()
     private val roomMessages = mutableListOf<LocalMessage>()
     private lateinit var messageAdapter: RoomMessageAdapter
     private lateinit var roomLayoutManager: LinearLayoutManager
     private var autoScrollEnabled = true
     private var activeTab: Tab = Tab.ROOM
-    private var activeRoomMode: RoomMode = RoomMode.ANT_FARM
     private var activeRoomSlug: String = DEFAULT_ROOM
-    private var activeRoomName: String = RoomMode.ANT_FARM.title
+    private var activeRoomName: String = "Family room"
     private val localTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val isoTimeFormat = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
     private val googleSignInLauncher =
@@ -98,7 +70,7 @@ class MainActivity : AppCompatActivity() {
                     persistSignedInUser(user)
                     binding.roomStatus.text = "Signed in as ${getCurrentNickname() ?: user.displayName ?: user.email}"
                     binding.roomPresenceChip.text = "Owner"
-                    binding.roomHint.text = "Owner setup complete. The linked ClawWatch agent can now load the room."
+                    binding.roomHint.text = "Owner setup complete. GroupMind can now load the room."
                     if (isHumanReady()) {
                         refreshActiveConversation()
                     }
@@ -148,26 +120,15 @@ class MainActivity : AppCompatActivity() {
         binding.googleSignOutButton.setOnClickListener { signOutOwner() }
         binding.saveNicknameButton.setOnClickListener { saveNickname() }
         binding.loadRoomNowButton.setOnClickListener {
-            activeRoomMode = RoomMode.ANT_FARM
             refreshActiveConversation(switchToRoom = true)
         }
         binding.openAntFarmRoomButton.setOnClickListener {
-            activeRoomMode = RoomMode.ANT_FARM
-            refreshActiveConversation(switchToRoom = true)
-        }
-        binding.openLocalQwenButton.setOnClickListener {
-            activeRoomMode = RoomMode.LOCAL_QWEN
             refreshActiveConversation(switchToRoom = true)
         }
 
         binding.composerInput.inputType = InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
-
-        binding.actionCheckWatch.setOnClickListener { runQuickAction("Check on watch") }
-        binding.actionSummarizeFamily.setOnClickListener { runQuickAction("Summarize family") }
-        binding.actionOpenScratchpad.setOnClickListener { runQuickAction("Open scratchpad") }
-        binding.actionInviteSomeone.setOnClickListener { runQuickAction("Invite someone") }
 
         loadSavedSettings()
         seedInitialMessages()
@@ -194,14 +155,14 @@ class MainActivity : AppCompatActivity() {
         styleTab(binding.tabRoom, active = tab == Tab.ROOM)
         styleTab(binding.tabRooms, active = tab == Tab.ROOMS)
         styleTab(binding.tabWatch, active = tab == Tab.WATCH)
-        styleModeButtons()
+        styleModeButton(binding.openAntFarmRoomButton, active = true)
     }
 
     private fun applyHeader() {
         when (activeTab) {
             Tab.ROOM -> {
                 binding.headerTitle.text = activeRoomName
-                binding.headerSubtitle.text = activeRoomMode.subtitle
+                binding.headerSubtitle.text = "Live Ant Farm room timeline and messaging."
             }
             else -> {
                 binding.headerTitle.text = activeTab.title
@@ -217,11 +178,6 @@ class MainActivity : AppCompatActivity() {
         button.setTextColor(ContextCompat.getColor(this, foreground))
     }
 
-    private fun styleModeButtons() {
-        styleModeButton(binding.openAntFarmRoomButton, activeRoomMode == RoomMode.ANT_FARM)
-        styleModeButton(binding.openLocalQwenButton, activeRoomMode == RoomMode.LOCAL_QWEN)
-    }
-
     private fun styleModeButton(button: Button, active: Boolean) {
         val background = if (active) R.color.tab_active else R.color.tab_inactive
         val foreground = if (active) R.color.tab_active_text else R.color.tab_inactive_text
@@ -232,8 +188,6 @@ class MainActivity : AppCompatActivity() {
     private fun loadSavedSettings() {
         ensureInternalTestDefaults()
         binding.antFarmRoomInput.setText(getConfiguredRoom())
-        binding.localModelBaseUrlInput.setText(getLocalModelBaseUrl())
-        binding.localModelNameInput.setText(getLocalModelName())
         activeRoomSlug = getConfiguredRoom()
         googleSignInManager.getCurrentUser()?.let { persistSignedInUser(it, updateUi = false) }
         updateOwnerUi()
@@ -257,8 +211,6 @@ class MainActivity : AppCompatActivity() {
     private fun saveWatchSettings() {
         prefs.edit()
             .putString(PREF_ANTFARM_ROOMS, binding.antFarmRoomInput.text?.toString()?.trim().orEmpty())
-            .putString(PREF_LOCAL_MODEL_BASE_URL, binding.localModelBaseUrlInput.text?.toString()?.trim().orEmpty())
-            .putString(PREF_LOCAL_MODEL_NAME, binding.localModelNameInput.text?.toString()?.trim().orEmpty())
             .apply()
 
         activeRoomSlug = getConfiguredRoom()
@@ -266,7 +218,7 @@ class MainActivity : AppCompatActivity() {
         binding.roomPresenceChip.text = "Saved"
         binding.roomHint.text =
             if (isHumanReady()) {
-                "Owner setup complete. The room and local-Qwen targets are ready to load from the Rooms tab."
+                "Owner setup complete. The room target is ready to load from the Rooms tab."
             } else {
                 "Save the Google owner account and nickname before loading rooms."
             }
@@ -277,36 +229,19 @@ class MainActivity : AppCompatActivity() {
         if (roomMessages.isNotEmpty()) return
 
         roomMessages += LocalMessage(
-            author = "ClawWatch",
-            body = "Open Rooms to switch between the live Ant Farm room and a direct 1:1 Qwen chat.",
+            author = "GroupMind",
+            body = "Open Rooms to load your family room, then chat live.",
             timestamp = nowTime(),
             isUser = false
         )
-        binding.roomHint.text = activeRoomMode.hint
+        binding.roomHint.text = "Connected room state and message timeline appear here."
         binding.roomStatus.text = "Choose a room target to begin"
-        binding.roomPresenceChip.text = activeRoomMode.chip
-    }
-
-    private fun runQuickAction(label: String) {
-        binding.composerInput.setText(
-            when (label) {
-                "Check on watch" -> "How is the watch doing right now?"
-                "Summarize family" -> "What is going on with the family?"
-                "Open scratchpad" -> "Open the room scratchpad and summarize the latest plan."
-                "Invite someone" -> "Invite someone into this room and explain what it is for."
-                else -> ""
-            }
-        )
-        binding.composerInput.text?.let { binding.composerInput.setSelection(it.length) }
-        sendComposerMessage()
+        binding.roomPresenceChip.text = "Live room"
     }
 
     private fun refreshActiveConversation(switchToRoom: Boolean = false) {
         if (switchToRoom) showTab(Tab.ROOM)
-        when (activeRoomMode) {
-            RoomMode.ANT_FARM -> refreshAntFarmRoom()
-            RoomMode.LOCAL_QWEN -> refreshLocalRoom()
-        }
+        refreshAntFarmRoom()
     }
 
     private fun refreshAntFarmRoom() {
@@ -314,11 +249,11 @@ class MainActivity : AppCompatActivity() {
         val room = getConfiguredRoom()
 
         if (!isSignedInWithGoogle()) {
-            activeRoomName = RoomMode.ANT_FARM.title
+            activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "Sign in with Google in the Watch tab before loading your ClawWatch room.",
+                author = "GroupMind",
+                body = "Sign in with Google in the Account tab before loading your room.",
                 timestamp = nowTime(),
                 isUser = false
             )
@@ -331,11 +266,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (!hasNickname()) {
-            activeRoomName = RoomMode.ANT_FARM.title
+            activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "Set your nickname in the Watch tab before loading the family room.",
+                author = "GroupMind",
+                body = "Set your nickname in the Account tab before loading the family room.",
                 timestamp = nowTime(),
                 isUser = false
             )
@@ -348,15 +283,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (apiKey.isNullOrBlank()) {
-            activeRoomName = RoomMode.ANT_FARM.title
+            activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "The internal ClawWatch room transport is missing. Reload the app and try again.",
+                author = "GroupMind",
+                body = "The internal room transport is missing. Reload the app and try again.",
                 timestamp = nowTime(),
                 isUser = false
             )
-            binding.roomHint.text = "The hidden ClawWatch agent transport is not configured."
+            binding.roomHint.text = "The hidden room transport is not configured."
             binding.roomStatus.text = "Transport missing"
             binding.roomPresenceChip.text = "Setup"
             applyHeader()
@@ -373,7 +308,7 @@ class MainActivity : AppCompatActivity() {
                     binding.roomStatus.text = "Connected • ${feed.roomSlug} • ${feed.messages.size} messages"
                     binding.roomPresenceChip.text = "Live"
                     binding.roomHint.text =
-                        "Signed in as ${getCurrentNickname()} • the linked ClawWatch agent is carrying room traffic underneath."
+                        "Signed in as ${getCurrentNickname()} • live room traffic is active."
 
                     roomMessages.clear()
                     roomMessages += feed.messages.map {
@@ -386,7 +321,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     if (roomMessages.isEmpty()) {
                         roomMessages += LocalMessage(
-                            author = "ClawWatch",
+                            author = "GroupMind",
                             body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
                             timestamp = nowTime(),
                             isUser = false
@@ -397,10 +332,10 @@ class MainActivity : AppCompatActivity() {
                     setRoomLoadingState(loading = false, message = "Room live")
                 }
                 .onFailure { error ->
-                    activeRoomName = RoomMode.ANT_FARM.title
+                    activeRoomName = "Family room"
                     roomMessages.clear()
                     roomMessages += LocalMessage(
-                        author = "ClawWatch",
+                        author = "GroupMind",
                         body = "Room load failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
                         isUser = false
@@ -415,33 +350,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshLocalRoom() {
-        activeRoomName = RoomMode.LOCAL_QWEN.title
-        binding.roomStatus.text = "Ready • ${getLocalModelName()} @ ${getLocalModelBaseUrl()}"
-        binding.roomPresenceChip.text = "Local"
-        binding.roomHint.text = RoomMode.LOCAL_QWEN.hint
-        if (roomMessages.isEmpty() || roomMessages.firstOrNull()?.author != "ClawWatch") {
-            roomMessages.clear()
-            roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "This is the local 1:1 Qwen chat. Messages here go to the configured local endpoint instead of Ant Farm.",
-                timestamp = nowTime(),
-                isUser = false
-            )
-        }
-        applyHeader()
-        renderRoomMessages(forceScroll = true)
-        setRoomLoadingState(loading = false, message = "Local room ready")
-    }
-
     private fun sendComposerMessage() {
         val message = binding.composerInput.text?.toString()?.trim().orEmpty()
         if (message.isEmpty()) return
-
-        when (activeRoomMode) {
-            RoomMode.ANT_FARM -> sendAntFarmMessage(message)
-            RoomMode.LOCAL_QWEN -> sendLocalModelMessage(message)
-        }
+        sendAntFarmMessage(message)
     }
 
     private fun sendAntFarmMessage(message: String) {
@@ -449,8 +361,8 @@ class MainActivity : AppCompatActivity() {
         val room = getConfiguredRoom()
         if (!isHumanReady()) {
             roomMessages += LocalMessage(
-                "ClawWatch",
-                "Finish Google sign-in and nickname setup in the Watch tab before sending room messages.",
+                "GroupMind",
+                "Finish Google sign-in and nickname setup in the Account tab before sending room messages.",
                 nowTime(),
                 false
             )
@@ -458,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (apiKey.isNullOrBlank()) {
-            roomMessages += LocalMessage("ClawWatch", "The internal ClawWatch transport is missing. Reload the app and try again.", nowTime(), false)
+            roomMessages += LocalMessage("GroupMind", "The internal room transport is missing. Reload the app and try again.", nowTime(), false)
             renderRoomMessages(forceScroll = true)
             return
         }
@@ -479,7 +391,7 @@ class MainActivity : AppCompatActivity() {
                 .onSuccess { refreshAntFarmRoom() }
                 .onFailure { error ->
                     roomMessages += LocalMessage(
-                        author = "ClawWatch",
+                        author = "GroupMind",
                         body = "Send failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
                         isUser = false
@@ -487,47 +399,6 @@ class MainActivity : AppCompatActivity() {
                     setRoomLoadingState(loading = false, message = "Send failed")
                     renderRoomMessages()
                 }
-        }
-    }
-
-    private fun sendLocalModelMessage(message: String) {
-        autoScrollEnabled = true
-        roomMessages += LocalMessage(author = "You", body = message, timestamp = nowTime(), isUser = true)
-        binding.composerInput.text?.clear()
-        renderRoomMessages(forceScroll = true)
-        setRoomLoadingState(loading = true, message = "Calling local Qwen…")
-
-        lifecycleScope.launch {
-            localModelClient.chat(
-                baseUrl = getLocalModelBaseUrl(),
-                model = getLocalModelName(),
-                transcript = roomMessages.toList(),
-                systemPrompt = LOCAL_SYSTEM_PROMPT
-            ).onSuccess { response ->
-                roomMessages += LocalMessage(
-                    author = response.model,
-                    body = response.content,
-                    timestamp = nowTime(),
-                    isUser = false
-                )
-                binding.roomStatus.text = "Local reply • ${response.model}"
-                binding.roomPresenceChip.text = "Local"
-                binding.roomHint.text = "Direct 1:1 chat with the phone-hosted Qwen endpoint."
-                renderRoomMessages()
-                setRoomLoadingState(loading = false, message = "Local reply ready")
-            }.onFailure { error ->
-                roomMessages += LocalMessage(
-                    author = "ClawWatch",
-                    body = "Local Qwen failed: ${error.message ?: "unknown error"}",
-                    timestamp = nowTime(),
-                    isUser = false
-                )
-                binding.roomStatus.text = "Local Qwen unavailable"
-                binding.roomPresenceChip.text = "Error"
-                binding.roomHint.text = "Set the local endpoint in Watch, then make sure the phone-hosted model server is running."
-                renderRoomMessages()
-                setRoomLoadingState(loading = false, message = "Local Qwen failed")
-            }
         }
     }
 
@@ -573,7 +444,6 @@ class MainActivity : AppCompatActivity() {
         binding.sendButton.isEnabled = !loading && isHumanReady()
         binding.loadRoomNowButton.isEnabled = !loading
         binding.openAntFarmRoomButton.isEnabled = !loading
-        binding.openLocalQwenButton.isEnabled = !loading
         binding.roomStatus.text = message
         if (loading) {
             binding.roomPresenceChip.text = "Syncing"
@@ -597,18 +467,6 @@ class MainActivity : AppCompatActivity() {
             .map { it.trim() }
             .firstOrNull { it.isNotBlank() }
             ?: DEFAULT_ROOM
-
-    private fun getLocalModelBaseUrl(): String =
-        prefs.getString(PREF_LOCAL_MODEL_BASE_URL, DEFAULT_LOCAL_URL)
-            ?.trim()
-            ?.ifBlank { DEFAULT_LOCAL_URL }
-            ?: DEFAULT_LOCAL_URL
-
-    private fun getLocalModelName(): String =
-        prefs.getString(PREF_LOCAL_MODEL_NAME, DEFAULT_LOCAL_MODEL)
-            ?.trim()
-            ?.ifBlank { DEFAULT_LOCAL_MODEL }
-            ?: DEFAULT_LOCAL_MODEL
 
     private fun getOwnerEmail(): String? =
         prefs.getString(PREF_HUMAN_EMAIL, null)?.trim()?.takeIf { it.isNotBlank() }
@@ -656,7 +514,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString(getNicknameKey(email), nickname).apply()
         binding.roomStatus.text = "Owner ready • $nickname"
         binding.roomPresenceChip.text = "Owner"
-        binding.roomHint.text = "Signed in as $nickname. The room can now load through the linked ClawWatch agent."
+        binding.roomHint.text = "Signed in as $nickname. The room can now load through GroupMind."
         updateOwnerUi()
 
         if (hasRoomConfig()) {
@@ -675,7 +533,7 @@ class MainActivity : AppCompatActivity() {
         updateOwnerUi()
         binding.roomStatus.text = "Signed out"
         binding.roomPresenceChip.text = "Setup"
-        binding.roomHint.text = "Sign in with Google in the Watch tab to use the room as the ClawWatch owner."
+        binding.roomHint.text = "Sign in with Google in the Account tab to use the room."
     }
 
     private fun updateOwnerUi() {
@@ -693,9 +551,9 @@ class MainActivity : AppCompatActivity() {
 
         binding.googleAuthSummary.text =
             if (!signedIn) {
-                "Sign in with Google to claim this ClawWatch companion and unlock your human profile setup."
+                "Sign in with Google to use this GroupMind companion and unlock profile setup."
             } else if (nickname.isNullOrBlank()) {
-                "This Google account is connected. Pick the nickname ClawWatch should use for it."
+                "This Google account is connected. Pick the nickname GroupMind should use for it."
             } else {
                 "Signed in as $nickname. Room access is ready for this owner."
             }
@@ -706,9 +564,9 @@ class MainActivity : AppCompatActivity() {
         binding.nicknameInput.setText(nickname.orEmpty())
         binding.nicknameSummary.text =
             if (!signedIn) {
-                "Sign in first to choose the nickname this account should use in ClawWatch."
+                "Sign in first to choose the nickname this account should use in GroupMind."
             } else if (nickname.isNullOrBlank()) {
-                "Set the nickname this account should use in ClawWatch."
+                "Set the nickname this account should use in GroupMind."
             } else {
                 "Current nickname: $nickname"
             }

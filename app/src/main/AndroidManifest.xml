@@ -5,9 +5,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="ClawWatch Pro"
+        android:label="GroupMind"
         android:icon="@mipmap/ic_launcher"
-        android:extractNativeLibs="true"
         android:theme="@style/Theme.ClawWatchPro">
 
         <activity

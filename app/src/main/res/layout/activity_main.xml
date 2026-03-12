@@ -20,7 +20,7 @@
             android:id="@+id/headerEyebrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ClawWatch Pro"
+            android:text="GroupMind"
             android:textAllCaps="true"
             android:textColor="#7DD3FC"
             android:textSize="12sp"
@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Chat with the live Ant Farm room."
+            android:text="Chat with your live Ant Farm room."
             android:textColor="#94A3B8"
             android:textSize="14sp" />
     </LinearLayout>
@@ -79,7 +79,7 @@
                         android:id="@+id/roomStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Configure the room in Watch, then sync it here."
+                        android:text="Configure the room in Account, then sync it here."
                         android:textColor="#F8FAFC"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -122,7 +122,7 @@
                     android:paddingStart="12dp"
                     android:paddingTop="8dp"
                     android:paddingEnd="12dp"
-                    android:paddingBottom="172dp" />
+                    android:paddingBottom="112dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/refreshRoomButton"
@@ -140,70 +140,6 @@
                     android:text="Refresh"
                     android:textAllCaps="false"
                     android:textSize="12sp" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="96dp"
-                    app:cardBackgroundColor="#151F37"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingStart="8dp"
-                        android:paddingTop="8dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="8dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/actionCheckWatch"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:minHeight="0dp"
-                            android:text="Check watch"
-                            android:textAllCaps="false"
-                            android:textSize="12sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/actionSummarizeFamily"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:minHeight="0dp"
-                            android:text="Summarize"
-                            android:textAllCaps="false"
-                            android:textSize="12sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/actionOpenScratchpad"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:minHeight="0dp"
-                            android:text="Scratchpad"
-                            android:textAllCaps="false"
-                            android:textSize="12sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/actionInviteSomeone"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:minHeight="0dp"
-                            android:text="Invite"
-                            android:textAllCaps="false"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/scrollToBottomFab"
@@ -292,7 +228,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Pick the live room target you want to use in the chat screen."
+                    android:text="Pick the room target you want to use in chat."
                     android:textColor="#94A3B8"
                     android:textSize="14sp" />
 
@@ -321,7 +257,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Uses the saved Ant Farm agent key and room slug to load the shared room timeline."
+                            android:text="Uses your saved room slug to load the shared room timeline."
                             android:textColor="#94A3B8"
                             android:textSize="14sp" />
 
@@ -330,46 +266,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="Open Ant Farm room"
-                            android:textAllCaps="false" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    app:cardBackgroundColor="#10182D"
-                    app:cardCornerRadius="20dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="18dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="1:1 with Qwen"
-                            android:textColor="#F8FAFC"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Uses a local OpenAI-compatible endpoint from the phone-hosted Qwen experiment."
-                            android:textColor="#94A3B8"
-                            android:textSize="14sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/openLocalQwenButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:text="Open 1:1 with Qwen"
+                            android:text="Open family room"
                             android:textAllCaps="false" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -392,7 +289,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Watch"
+                    android:text="Account"
                     android:textColor="#F8FAFC"
                     android:textSize="24sp"
                     android:textStyle="bold" />
@@ -401,7 +298,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Sign in with Google, make sure your nickname is set, then choose the room and local model settings."
+                    android:text="Sign in with Google, set your nickname, then choose the room slug."
                     android:textColor="#94A3B8"
                     android:textSize="14sp" />
 
@@ -431,7 +328,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Sign in with Google to claim this ClawWatch companion and unlock your human profile setup."
+                            android:text="Sign in with Google to use this GroupMind companion."
                             android:textColor="#94A3B8"
                             android:textSize="14sp" />
 
@@ -497,7 +394,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Set the nickname this account should use in ClawWatch."
+                            android:text="Set the nickname this account should use in GroupMind."
                             android:textColor="#94A3B8"
                             android:textSize="14sp" />
 
@@ -534,32 +431,6 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/antFarmRoomInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:hint="Local model base URL">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/localModelBaseUrlInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="Local model name">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/localModelNameInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -627,7 +498,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:backgroundTint="#1E293B"
-            android:text="Watch"
+            android:text="Account"
             android:textColor="#CBD5E1" />
     </LinearLayout>
 

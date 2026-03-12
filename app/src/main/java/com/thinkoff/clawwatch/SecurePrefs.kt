@@ -7,16 +7,14 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 object SecurePrefs {
-    private const val TAG = "ClawWatchProPrefs"
+    private const val TAG = "GroupMindPrefs"
     private const val LEGACY_PREFS_NAME = "clawwatch_pro_prefs"
     private const val SECURE_PREFS_NAME = "clawwatch_pro_secure_prefs"
 
     private val MIGRATION_KEYS = setOf(
         "anthropic_api_key",
         "antfarm_api_key",
-        "antfarm_rooms",
-        "local_model_base_url",
-        "local_model_name"
+        "antfarm_rooms"
     )
 
     @Volatile
