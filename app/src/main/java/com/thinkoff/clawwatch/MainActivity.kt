@@ -76,10 +76,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 .onFailure { error ->
+                    val errorText = error.message?.trim().orEmpty().ifBlank { "Google sign-in did not complete." }
                     binding.roomStatus.text = "Google sign-in failed"
                     binding.roomPresenceChip.text = "Error"
-                    binding.roomHint.text = error.message ?: "Google sign-in did not complete."
+                    binding.roomHint.text = errorText
                     updateOwnerUi()
+                    binding.googleAuthSummary.text = errorText
                 }
         }
 
