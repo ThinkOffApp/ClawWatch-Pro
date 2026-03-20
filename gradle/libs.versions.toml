@@ -9,6 +9,10 @@ coroutines = "1.8.1"
 vosk = "0.3.47"
 securityCrypto = "1.1.0-alpha06"
 googlePlayServicesAuth = "21.3.0"
+wearable = "18.1.0"
+workRuntime = "2.9.0"
+coroutinesPlayServices = "1.8.1"
+firebaseMessaging = "24.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -19,6 +23,10 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googlePlayServicesAuth" }
+play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "wearable" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
