@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         
         binding.headerEyebrow.text = android.text.Html.fromHtml(getString(R.string.groupmind_html), android.text.Html.FROM_HTML_MODE_LEGACY)
         
-        prefs = SecurePrefs.companion(this)
+        prefs = SecurePrefs.watch(this)
         googleSignInManager = GoogleSignInManager(this)
         messageAdapter = RoomMessageAdapter(roomMessages)
 
