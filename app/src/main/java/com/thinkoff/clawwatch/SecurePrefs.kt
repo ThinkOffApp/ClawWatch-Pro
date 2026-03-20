@@ -6,26 +6,35 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
+/**
+ * Provides encrypted preferences for watch config/secrets and migrates
+ * legacy plaintext preferences if present.
+ */
 object SecurePrefs {
-    private const val TAG = "GroupMindPrefs"
-    private const val LEGACY_PREFS_NAME = "clawwatch_pro_prefs"
-    private const val SECURE_PREFS_NAME = "clawwatch_pro_secure_prefs"
+    private const val TAG = "SecurePrefs"
+    private const val LEGACY_PREFS_NAME = "clawwatch_prefs"
+    private const val SECURE_PREFS_NAME = "clawwatch_secure_prefs"
 
     private val MIGRATION_KEYS = setOf(
         "anthropic_api_key",
-        "antfarm_api_key",
-        "antfarm_rooms"
+        "brave_api_key",
+        "tavily_api_key",
+        "model",
+        "system_prompt",
+        "max_tokens",
+        "rag_mode",
+        "avatar_type"
     )
 
     @Volatile
-    private var cachedPrefs: SharedPreferences? = null
+    private var cachedWatchPrefs: SharedPreferences? = null
 
-    fun companion(context: Context): SharedPreferences {
-        cachedPrefs?.let { return it }
+    fun watch(context: Context): SharedPreferences {
+        cachedWatchPrefs?.let { return it }
         val appContext = context.applicationContext
 
         return synchronized(this) {
-            cachedPrefs?.let { return@synchronized it }
+            cachedWatchPrefs?.let { return@synchronized it }
 
             val secure = try {
                 val masterKey = MasterKey.Builder(appContext)
@@ -39,12 +48,12 @@ object SecurePrefs {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "EncryptedSharedPreferences unavailable; refusing plaintext secret storage", e)
-                throw IllegalStateException("Encrypted storage unavailable on this device", e)
+                Log.e(TAG, "FATAL: EncryptedSharedPreferences initialization failed. Refusing to fall back to plaintext to protect secrets.", e)
+                throw SecurityException("Secure storage initialization failed", e)
             }
 
             migrateLegacyIfPresent(appContext, secure)
-            cachedPrefs = secure
+            cachedWatchPrefs = secure
             secure
         }
     }
@@ -71,6 +80,6 @@ object SecurePrefs {
 
         editor.apply()
         legacy.edit().clear().apply()
-        Log.i(TAG, "Migrated legacy companion prefs")
+        Log.i(TAG, "Migrated legacy watch prefs to encrypted storage")
     }
 }
