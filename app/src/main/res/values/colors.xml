@@ -1,13 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="tab_active">#38BDF8</color>
-    <color name="tab_active_text">#0F172A</color>
-    <color name="tab_inactive">#1E293B</color>
-    <color name="tab_inactive_text">#CBD5E1</color>
-    <color name="bubble_in">#111827</color>
-    <color name="bubble_out">#1D4ED8</color>
-    <color name="on_bubble_in">#E5E7EB</color>
-    <color name="on_bubble_out">#EFF6FF</color>
-    <color name="on_bubble_in_hint">#93C5FD</color>
-    <color name="on_bubble_out_hint">#BFDBFE</color>
+    <!-- Backgrounds -->
+    <color name="bg_dark">#0A0A0A</color>
+    <color name="bg_panel">#121212</color>
+    <color name="bg_card">#1A1A1A</color>
+    
+    <!-- ThinkOff Accents -->
+    <color name="thinkoff_green">#55AA00</color>
+    <color name="thinkoff_green_light">#99DD00</color>
+    <color name="thinkoff_pink">#FF77FF</color>
+    <color name="thinkoff_yellow">#FFDD00</color>
+    
+    <!-- UI Elements -->
+    <color name="border_light">#1AFFFFFF</color>
+    <color name="tab_active">#99DD00</color>
+    <color name="tab_active_text">#0A0A0A</color>
+    <color name="tab_inactive">#1A1A1A</color>
+    <color name="tab_inactive_text">#9CA3AF</color>
+    
+    <!-- Bubbles -->
+    <color name="bubble_in">#1A1A1A</color>
+    <color name="bubble_out">#55AA00</color>
+    <color name="on_bubble_in">#FFFFFF</color>
+    <color name="on_bubble_out">#FFFFFF</color>
+    <color name="on_bubble_in_hint">#9CA3AF</color>
+    <color name="on_bubble_out_hint">#E5E7EB</color>
 </resources>

@@ -28,8 +28,13 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_HUMAN_EMAIL = "human_email"
         private const val PREF_HUMAN_DISPLAY_NAME = "human_display_name"
         private const val PREF_HUMAN_AVATAR_URL = "human_avatar_url"
+        private const val PREF_LOCAL_OWNER_MODE = "local_owner_mode"
         private const val DEFAULT_ROOM = "ant-farm-management"
         private const val DEFAULT_TEST_ANTFARM_KEY = "antfarm_67efac6733223e873ab305e1e48e9c6a3f573eab38d07b00c8eabffd718d0b2b"
+        private const val LOCAL_OWNER_EMAIL = "local-owner@device.local"
+        private const val LOCAL_OWNER_NAME = "Local owner"
+        private const val IDE_ROOM_THINKOFF_DEVELOPMENT = "thinkoff-development"
+        private const val IDE_ROOM_ANT_FARM_MANAGEMENT = "ant-farm-management"
     }
 
     private enum class Tab(
@@ -77,6 +82,15 @@ class MainActivity : AppCompatActivity() {
                 }
                 .onFailure { error ->
                     val errorText = error.message?.trim().orEmpty().ifBlank { "Google sign-in did not complete." }
+                    if (isDeveloperError(errorText)) {
+                        persistLocalOwner(updateUi = false)
+                        binding.roomStatus.text = "Local owner mode enabled"
+                        binding.roomPresenceChip.text = "Local"
+                        binding.roomHint.text = "Google OAuth for this debug build is not configured yet, so local owner mode is active on this device."
+                        binding.googleAuthSummary.text = "Google OAuth for this debug build is not configured yet. Using local owner mode so you can test the companion app now."
+                        updateOwnerUi()
+                        return@registerForActivityResult
+                    }
                     binding.roomStatus.text = "Google sign-in failed"
                     binding.roomPresenceChip.text = "Error"
                     binding.roomHint.text = errorText
@@ -89,6 +103,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        binding.headerEyebrow.text = android.text.Html.fromHtml(getString(R.string.groupmind_html), android.text.Html.FROM_HTML_MODE_LEGACY)
+        
         prefs = SecurePrefs.companion(this)
         googleSignInManager = GoogleSignInManager(this)
         messageAdapter = RoomMessageAdapter(roomMessages)
@@ -125,7 +142,22 @@ class MainActivity : AppCompatActivity() {
             refreshActiveConversation(switchToRoom = true)
         }
         binding.openAntFarmRoomButton.setOnClickListener {
-            refreshActiveConversation(switchToRoom = true)
+            openRoomTarget(
+                roomSlug = getConfiguredRoom(),
+                roomName = "Family room"
+            )
+        }
+        binding.openThinkoffDevelopmentButton.setOnClickListener {
+            openRoomTarget(
+                roomSlug = IDE_ROOM_THINKOFF_DEVELOPMENT,
+                roomName = "thinkoff-development"
+            )
+        }
+        binding.openAntFarmManagementButton.setOnClickListener {
+            openRoomTarget(
+                roomSlug = IDE_ROOM_ANT_FARM_MANAGEMENT,
+                roomName = "ant-farm-management"
+            )
         }
 
         binding.composerInput.inputType = InputType.TYPE_CLASS_TEXT or
@@ -191,6 +223,7 @@ class MainActivity : AppCompatActivity() {
         ensureInternalTestDefaults()
         binding.antFarmRoomInput.setText(getConfiguredRoom())
         activeRoomSlug = getConfiguredRoom()
+        updateRoomsUi()
         googleSignInManager.getCurrentUser()?.let { persistSignedInUser(it, updateUi = false) }
         updateOwnerUi()
     }
@@ -216,6 +249,8 @@ class MainActivity : AppCompatActivity() {
             .apply()
 
         activeRoomSlug = getConfiguredRoom()
+        activeRoomName = "Family room"
+        updateRoomsUi()
         binding.roomStatus.text = if (isHumanReady()) "Settings saved" else "Finish owner setup first"
         binding.roomPresenceChip.text = "Saved"
         binding.roomHint.text =
@@ -248,7 +283,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshAntFarmRoom() {
         val apiKey = getAntFarmKey()
-        val room = getConfiguredRoom()
+        val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
 
         if (!isSignedInWithGoogle()) {
             activeRoomName = "Family room"
@@ -306,7 +341,7 @@ class MainActivity : AppCompatActivity() {
             antFarmClient.fetchRoomMessages(room, apiKey)
                 .onSuccess { feed ->
                     activeRoomSlug = feed.roomSlug
-                    activeRoomName = feed.roomName
+                    activeRoomName = displayNameForRoom(feed.roomSlug, fallback = feed.roomName)
                     binding.roomStatus.text = "Connected • ${feed.roomSlug} • ${feed.messages.size} messages"
                     binding.roomPresenceChip.text = "Live"
                     binding.roomHint.text =
@@ -334,7 +369,7 @@ class MainActivity : AppCompatActivity() {
                     setRoomLoadingState(loading = false, message = "Room live")
                 }
                 .onFailure { error ->
-                    activeRoomName = "Family room"
+                    activeRoomName = displayNameForRoom(room, fallback = room)
                     roomMessages.clear()
                     roomMessages += LocalMessage(
                         author = "GroupMind",
@@ -360,7 +395,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendAntFarmMessage(message: String) {
         val apiKey = getAntFarmKey()
-        val room = getConfiguredRoom()
+        val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
         if (!isHumanReady()) {
             roomMessages += LocalMessage(
                 "GroupMind",
@@ -464,17 +499,43 @@ class MainActivity : AppCompatActivity() {
         prefs.getString(PREF_ANTFARM_KEY, null)?.takeIf { it.isNotBlank() }
 
     private fun getConfiguredRoom(): String =
+        getConfiguredRooms().firstOrNull() ?: DEFAULT_ROOM
+
+    private fun getConfiguredRooms(): List<String> =
         (prefs.getString(PREF_ANTFARM_ROOMS, DEFAULT_ROOM) ?: DEFAULT_ROOM)
             .split(',')
             .map { it.trim() }
-            .firstOrNull { it.isNotBlank() }
-            ?: DEFAULT_ROOM
+            .filter { it.isNotBlank() }
+            .ifEmpty { listOf(DEFAULT_ROOM) }
+
+    private fun openRoomTarget(roomSlug: String, roomName: String) {
+        activeRoomSlug = roomSlug
+        activeRoomName = roomName
+        applyHeader()
+        refreshActiveConversation(switchToRoom = true)
+    }
+
+    private fun updateRoomsUi() {
+        binding.familyRoomSummary.text = "Saved room slug: ${getConfiguredRoom()}"
+    }
+
+    private fun displayNameForRoom(roomSlug: String, fallback: String = roomSlug): String =
+        when {
+            roomSlug == activeRoomSlug && activeRoomName.isNotBlank() -> activeRoomName
+            roomSlug == IDE_ROOM_THINKOFF_DEVELOPMENT -> "thinkoff-development"
+            roomSlug == IDE_ROOM_ANT_FARM_MANAGEMENT -> "ant-farm-management"
+            roomSlug == getConfiguredRoom() -> "Family room"
+            else -> fallback
+        }
 
     private fun getOwnerEmail(): String? =
         prefs.getString(PREF_HUMAN_EMAIL, null)?.trim()?.takeIf { it.isNotBlank() }
 
     private fun getOwnerDisplayName(): String? =
         prefs.getString(PREF_HUMAN_DISPLAY_NAME, null)?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun isLocalOwnerMode(): Boolean =
+        prefs.getBoolean(PREF_LOCAL_OWNER_MODE, false)
 
     private fun getNicknameKey(email: String): String {
         val normalized = email.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "_").trim('_')
@@ -491,6 +552,20 @@ class MainActivity : AppCompatActivity() {
             .putString(PREF_HUMAN_EMAIL, user.email)
             .putString(PREF_HUMAN_DISPLAY_NAME, user.displayName)
             .putString(PREF_HUMAN_AVATAR_URL, user.avatarUrl)
+            .putBoolean(PREF_LOCAL_OWNER_MODE, false)
+            .apply()
+
+        if (updateUi) {
+            updateOwnerUi()
+        }
+    }
+
+    private fun persistLocalOwner(updateUi: Boolean = true) {
+        prefs.edit()
+            .putString(PREF_HUMAN_EMAIL, LOCAL_OWNER_EMAIL)
+            .putString(PREF_HUMAN_DISPLAY_NAME, LOCAL_OWNER_NAME)
+            .remove(PREF_HUMAN_AVATAR_URL)
+            .putBoolean(PREF_LOCAL_OWNER_MODE, true)
             .apply()
 
         if (updateUi) {
@@ -530,6 +605,7 @@ class MainActivity : AppCompatActivity() {
             .remove(PREF_HUMAN_EMAIL)
             .remove(PREF_HUMAN_DISPLAY_NAME)
             .remove(PREF_HUMAN_AVATAR_URL)
+            .remove(PREF_LOCAL_OWNER_MODE)
             .apply()
         binding.nicknameInput.text?.clear()
         updateOwnerUi()
@@ -543,6 +619,7 @@ class MainActivity : AppCompatActivity() {
         val displayName = getOwnerDisplayName()
         val nickname = getCurrentNickname()
         val signedIn = !email.isNullOrBlank()
+        val localOwnerMode = isLocalOwnerMode()
 
         binding.googleAuthEmail.text =
             if (signedIn) {
@@ -554,6 +631,8 @@ class MainActivity : AppCompatActivity() {
         binding.googleAuthSummary.text =
             if (!signedIn) {
                 "Sign in with Google to use this GroupMind companion and unlock profile setup."
+            } else if (localOwnerMode) {
+                "Google OAuth is not configured for this debug build, so this phone is using local owner mode."
             } else if (nickname.isNullOrBlank()) {
                 "This Google account is connected. Pick the nickname GroupMind should use for it."
             } else {
@@ -567,6 +646,8 @@ class MainActivity : AppCompatActivity() {
         binding.nicknameSummary.text =
             if (!signedIn) {
                 "Sign in first to choose the nickname this account should use in GroupMind."
+            } else if (localOwnerMode && nickname.isNullOrBlank()) {
+                "Set the nickname this device should use while local owner mode is active."
             } else if (nickname.isNullOrBlank()) {
                 "Set the nickname this account should use in GroupMind."
             } else {
@@ -575,6 +656,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.sendButton.isEnabled = isHumanReady()
         binding.loadRoomNowButton.isEnabled = isHumanReady()
+    }
+
+    private fun isDeveloperError(message: String): Boolean {
+        val normalized = message.lowercase(Locale.US)
+        return normalized.contains("developer_error") || normalized.contains("code 10")
     }
 
     private fun nowTime(): String = localTimeFormat.format(Date())

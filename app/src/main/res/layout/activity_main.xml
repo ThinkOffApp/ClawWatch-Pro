@@ -3,13 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B1020"
+    android:background="@color/bg_dark"
     android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#10182D"
+        android:background="@color/bg_panel"
         android:orientation="vertical"
         android:paddingStart="20dp"
         android:paddingTop="18dp"
@@ -20,11 +20,10 @@
             android:id="@+id/headerEyebrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="GroupMind"
-            android:textAllCaps="true"
-            android:textColor="#7DD3FC"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:text="@string/groupmind_html"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:letterSpacing="-0.02" />
 
         <TextView
             android:id="@+id/headerTitle"
@@ -32,7 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Room"
-            android:textColor="#F8FAFC"
+            android:textColor="#FFFFFF"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -42,7 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="Chat with your live Ant Farm room."
-            android:textColor="#94A3B8"
+            android:textColor="#9CA3AF"
             android:textSize="14sp" />
     </LinearLayout>
 
@@ -61,7 +60,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#0F172A"
+                android:background="@color/bg_card"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingStart="16dp"
@@ -80,7 +79,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Configure the room in Account, then sync it here."
-                        android:textColor="#F8FAFC"
+                        android:textColor="#FFFFFF"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -90,7 +89,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Connected room state and message timeline appear here."
-                        android:textColor="#94A3B8"
+                        android:textColor="#9CA3AF"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -104,7 +103,7 @@
                     android:paddingEnd="10dp"
                     android:paddingBottom="6dp"
                     android:text="Setup"
-                    android:textColor="#7DD3FC"
+                    android:textColor="@color/thinkoff_green_light"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -151,8 +150,8 @@
                     android:contentDescription="Scroll to latest message"
                     android:src="@android:drawable/arrow_down_float"
                     android:visibility="gone"
-                    app:backgroundTint="#2563EB"
-                    app:tint="#F8FAFC" />
+                    app:backgroundTint="@color/thinkoff_green"
+                    app:tint="#FFFFFF" />
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -220,7 +219,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Rooms"
-                    android:textColor="#F8FAFC"
+                    android:textColor="#FFFFFF"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -229,14 +228,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Pick the room target you want to use in chat."
-                    android:textColor="#94A3B8"
+                    android:textColor="#9CA3AF"
                     android:textSize="14sp" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    app:cardBackgroundColor="#10182D"
+                    app:cardBackgroundColor="@color/bg_panel"
                     app:cardCornerRadius="20dp">
 
                     <LinearLayout
@@ -249,16 +248,25 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Family room"
-                            android:textColor="#F8FAFC"
+                            android:textColor="#FFFFFF"
                             android:textSize="18sp"
                             android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/familyRoomSummary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Saved room slug: ant-farm-management"
+                            android:textColor="#D1D5DB"
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:text="Uses your saved room slug to load the shared room timeline."
-                            android:textColor="#94A3B8"
+                            android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -267,6 +275,53 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
                             android:text="Open family room"
+                            android:textAllCaps="false" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/bg_panel"
+                    app:cardCornerRadius="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="IDE channels"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Open the live team channels directly from the companion app."
+                            android:textColor="#9CA3AF"
+                            android:textSize="14sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/openThinkoffDevelopmentButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="Open thinkoff-development"
+                            android:textAllCaps="false" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/openAntFarmManagementButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="Open ant-farm-management"
                             android:textAllCaps="false" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -290,7 +345,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Account"
-                    android:textColor="#F8FAFC"
+                    android:textColor="#FFFFFF"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -299,14 +354,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Sign in with Google, set your nickname, then choose the room slug."
-                    android:textColor="#94A3B8"
+                    android:textColor="#9CA3AF"
                     android:textSize="14sp" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    app:cardBackgroundColor="#10182D"
+                    app:cardBackgroundColor="@color/bg_panel"
                     app:cardCornerRadius="20dp">
 
                     <LinearLayout
@@ -319,7 +374,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Google account"
-                            android:textColor="#F8FAFC"
+                            android:textColor="#FFFFFF"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
@@ -329,7 +384,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:text="Sign in with Google to use this GroupMind companion."
-                            android:textColor="#94A3B8"
+                            android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
                         <TextView
@@ -338,7 +393,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
                             android:text="Not signed in"
-                            android:textColor="#F8FAFC"
+                            android:textColor="#FFFFFF"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -372,7 +427,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    app:cardBackgroundColor="#10182D"
+                    app:cardBackgroundColor="@color/bg_panel"
                     app:cardCornerRadius="20dp">
 
                     <LinearLayout
@@ -385,7 +440,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Nickname"
-                            android:textColor="#F8FAFC"
+                            android:textColor="#FFFFFF"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
@@ -395,7 +450,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:text="Set the nickname this account should use in GroupMind."
-                            android:textColor="#94A3B8"
+                            android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -464,7 +519,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#10182D"
+        android:background="@color/bg_panel"
         android:elevation="8dp"
         android:orientation="horizontal"
         android:paddingStart="12dp"
@@ -477,9 +532,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:backgroundTint="#38BDF8"
+            android:backgroundTint="@color/tab_active"
             android:text="Room"
-            android:textColor="#0F172A" />
+            android:textColor="@color/bg_card" />
 
         <Button
             android:id="@+id/tabRooms"
@@ -487,9 +542,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:backgroundTint="#1E293B"
+            android:backgroundTint="@color/tab_inactive"
             android:text="Rooms"
-            android:textColor="#CBD5E1" />
+            android:textColor="@color/tab_inactive_text" />
 
         <Button
             android:id="@+id/tabWatch"
@@ -497,9 +552,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:backgroundTint="#1E293B"
+            android:backgroundTint="@color/tab_inactive"
             android:text="Account"
-            android:textColor="#CBD5E1" />
+            android:textColor="@color/tab_inactive_text" />
     </LinearLayout>
 
 </LinearLayout>

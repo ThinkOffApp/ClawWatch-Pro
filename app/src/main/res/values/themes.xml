@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.ClawWatchPro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#38BDF8</item>
-        <item name="colorPrimaryVariant">#0EA5E9</item>
-        <item name="colorSecondary">#7DD3FC</item>
-        <item name="android:statusBarColor">#10182D</item>
-        <item name="android:navigationBarColor">#10182D</item>
+        <item name="colorPrimary">@color/thinkoff_green</item>
+        <item name="colorPrimaryVariant">@color/thinkoff_green_light</item>
+        <item name="colorSecondary">@color/thinkoff_pink</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        
+        <!-- Apply Inter font globally -->
+        <item name="android:fontFamily">@font/inter_family</item>
+        <item name="fontFamily">@font/inter_family</item>
     </style>
 </resources>
