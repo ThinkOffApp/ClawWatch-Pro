@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
                     persistSignedInUser(user)
                     binding.roomStatus.text = "Signed in as ${getCurrentNickname() ?: user.displayName ?: user.email}"
                     binding.roomPresenceChip.text = "Owner"
-                    binding.roomHint.text = "Owner setup complete. GroupMind can now load the room."
+                    binding.roomHint.text = "Owner setup complete. ClawWatch can now load the room."
                     if (isHumanReady()) {
                         refreshActiveConversation()
                     }
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        binding.headerEyebrow.text = android.text.Html.fromHtml(getString(R.string.groupmind_html), android.text.Html.FROM_HTML_MODE_LEGACY)
+        binding.headerEyebrow.text = android.text.Html.fromHtml(getString(R.string.clawwatch_html), android.text.Html.FROM_HTML_MODE_LEGACY)
         
         prefs = SecurePrefs.watch(this)
         googleSignInManager = GoogleSignInManager(this)
@@ -266,7 +266,7 @@ class MainActivity : AppCompatActivity() {
         if (roomMessages.isNotEmpty()) return
 
         roomMessages += LocalMessage(
-            author = "GroupMind",
+            author = "ClawWatch",
             body = "Open Rooms to load your family room, then chat live.",
             timestamp = nowTime(),
             isUser = false
@@ -289,7 +289,7 @@ class MainActivity : AppCompatActivity() {
             activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "GroupMind",
+                author = "ClawWatch",
                 body = "Sign in with Google in the Account tab before loading your room.",
                 timestamp = nowTime(),
                 isUser = false
@@ -306,7 +306,7 @@ class MainActivity : AppCompatActivity() {
             activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "GroupMind",
+                author = "ClawWatch",
                 body = "Set your nickname in the Account tab before loading the family room.",
                 timestamp = nowTime(),
                 isUser = false
@@ -323,7 +323,7 @@ class MainActivity : AppCompatActivity() {
             activeRoomName = "Family room"
             roomMessages.clear()
             roomMessages += LocalMessage(
-                author = "GroupMind",
+                author = "ClawWatch",
                 body = "The internal room transport is missing. Reload the app and try again.",
                 timestamp = nowTime(),
                 isUser = false
@@ -358,7 +358,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     if (roomMessages.isEmpty()) {
                         roomMessages += LocalMessage(
-                            author = "GroupMind",
+                            author = "ClawWatch",
                             body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
                             timestamp = nowTime(),
                             isUser = false
@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity() {
                     activeRoomName = displayNameForRoom(room, fallback = room)
                     roomMessages.clear()
                     roomMessages += LocalMessage(
-                        author = "GroupMind",
+                        author = "ClawWatch",
                         body = "Room load failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
                         isUser = false
@@ -398,7 +398,7 @@ class MainActivity : AppCompatActivity() {
         val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
         if (!isHumanReady()) {
             roomMessages += LocalMessage(
-                "GroupMind",
+                "ClawWatch",
                 "Finish Google sign-in and nickname setup in the Account tab before sending room messages.",
                 nowTime(),
                 false
@@ -407,7 +407,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (apiKey.isNullOrBlank()) {
-            roomMessages += LocalMessage("GroupMind", "The internal room transport is missing. Reload the app and try again.", nowTime(), false)
+            roomMessages += LocalMessage("ClawWatch", "The internal room transport is missing. Reload the app and try again.", nowTime(), false)
             renderRoomMessages(forceScroll = true)
             return
         }
@@ -428,7 +428,7 @@ class MainActivity : AppCompatActivity() {
                 .onSuccess { refreshAntFarmRoom() }
                 .onFailure { error ->
                     roomMessages += LocalMessage(
-                        author = "GroupMind",
+                        author = "ClawWatch",
                         body = "Send failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
                         isUser = false
@@ -591,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString(getNicknameKey(email), nickname).apply()
         binding.roomStatus.text = "Owner ready • $nickname"
         binding.roomPresenceChip.text = "Owner"
-        binding.roomHint.text = "Signed in as $nickname. The room can now load through GroupMind."
+        binding.roomHint.text = "Signed in as $nickname. The room can now load through ClawWatch."
         updateOwnerUi()
 
         if (hasRoomConfig()) {
@@ -630,11 +630,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.googleAuthSummary.text =
             if (!signedIn) {
-                "Sign in with Google to use this GroupMind companion and unlock profile setup."
+                "Sign in with Google to use this ClawWatch companion and unlock profile setup."
             } else if (localOwnerMode) {
                 "Google OAuth is not configured for this debug build, so this phone is using local owner mode."
             } else if (nickname.isNullOrBlank()) {
-                "This Google account is connected. Pick the nickname GroupMind should use for it."
+                "This Google account is connected. Pick the nickname ClawWatch should use for it."
             } else {
                 "Signed in as $nickname. Room access is ready for this owner."
             }
@@ -645,11 +645,11 @@ class MainActivity : AppCompatActivity() {
         binding.nicknameInput.setText(nickname.orEmpty())
         binding.nicknameSummary.text =
             if (!signedIn) {
-                "Sign in first to choose the nickname this account should use in GroupMind."
+                "Sign in first to choose the nickname this account should use in ClawWatch."
             } else if (localOwnerMode && nickname.isNullOrBlank()) {
                 "Set the nickname this device should use while local owner mode is active."
             } else if (nickname.isNullOrBlank()) {
-                "Set the nickname this account should use in GroupMind."
+                "Set the nickname this account should use in ClawWatch."
             } else {
                 "Current nickname: $nickname"
             }

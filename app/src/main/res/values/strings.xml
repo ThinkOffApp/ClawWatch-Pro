@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="groupmind_html"><![CDATA[<font color="#FFFFFF">group</font><font color="#FF77FF">mind</font>]]></string>
+    <string name="clawwatch_html"><![CDATA[<font color="#FFFFFF">claw</font><font color="#FF9F3C">watch</font>]]></string>
 </resources>

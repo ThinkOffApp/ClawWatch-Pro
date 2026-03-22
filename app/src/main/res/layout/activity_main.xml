@@ -20,7 +20,7 @@
             android:id="@+id/headerEyebrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/groupmind_html"
+            android:text="@string/clawwatch_html"
             android:textSize="20sp"
             android:textStyle="bold"
             android:letterSpacing="-0.02" />
@@ -383,7 +383,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Sign in with Google to use this GroupMind companion."
+                            android:text="Sign in with Google to use this ClawWatch companion."
                             android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
@@ -449,7 +449,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Set the nickname this account should use in GroupMind."
+                            android:text="Set the nickname this account should use in ClawWatch."
                             android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
