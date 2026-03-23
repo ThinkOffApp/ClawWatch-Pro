@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "ClawWatch"
 include(":app")
 include(":watch")
+includeBuild("../ThinkOff-UI-Core")

@@ -1,35 +1,46 @@
 #!/bin/bash
-# Usage: ./set_key.sh sk-ant-your-key-here
-# Pushes Anthropic API key to the watch via ADB (no shell interpolation)
+set -euo pipefail
 
-KEY=$1
+# Usage:
+#   ANDROID_SERIAL=192.168.0.98:38999 ./set_key.sh antfarm_key_here ant-farm-management
+#   ./set_key.sh antfarm_key_here ant-farm-management
+#
+# Seeds the ClawWatch phone companion transport settings through the legacy
+# prefs file. The app migrates them into encrypted prefs on launch.
+
+KEY="${1:-}"
+ROOMS="${2:-ant-farm-management}"
 PKG="com.thinkoff.clawwatch"
+PREFS_NAME="clawwatch_prefs"
 
 if [ -z "$KEY" ]; then
-  echo "Usage: ./set_key.sh sk-ant-..."
+  echo "Usage: ./set_key.sh antfarm_key [room_slug_or_csv]"
   exit 1
 fi
 
-# Validate key — only alphanumeric, dash, underscore allowed
-if ! echo "$KEY" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+if ! echo "$KEY" | grep -qE '^[A-Za-z0-9_-]+$'; then
   echo "Error: invalid key format"
   exit 1
 fi
 
-# Write to temp file — never interpolate key into shell command
-TMP=$(mktemp /tmp/clawwatch_prefs_XXXXXX.xml)
-cat > "$TMP" << XMLEOF
+if ! echo "$ROOMS" | grep -qE '^[A-Za-z0-9,._-]+$'; then
+  echo "Error: invalid room list format"
+  exit 1
+fi
+
+TMP=$(mktemp /tmp/clawwatch_phone_prefs_XXXXXX.xml)
+cat > "$TMP" <<XMLEOF
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <map>
-    <string name="anthropic_api_key">${KEY}</string>
+    <string name="antfarm_api_key">${KEY}</string>
+    <string name="antfarm_rooms">${ROOMS}</string>
 </map>
 XMLEOF
 
-echo "Pushing API key to watch..."
-adb push "$TMP" /sdcard/clawwatch_tmp.xml
-adb shell "run-as $PKG sh -c 'mkdir -p /data/data/$PKG/shared_prefs'"
-adb shell "run-as $PKG sh -c 'cp /sdcard/clawwatch_tmp.xml /data/data/$PKG/shared_prefs/clawwatch_prefs.xml'"
-adb shell "rm /sdcard/clawwatch_tmp.xml"
+echo "Pushing ClawWatch phone key to device..."
+adb push "$TMP" /data/local/tmp/clawwatch_phone_tmp.xml >/dev/null
+adb shell "run-as $PKG sh -c 'mkdir -p /data/data/$PKG/shared_prefs && cp /data/local/tmp/clawwatch_phone_tmp.xml /data/data/$PKG/shared_prefs/${PREFS_NAME}.xml'"
+adb shell "rm /data/local/tmp/clawwatch_phone_tmp.xml"
 rm "$TMP"
 
-echo "Done. Restart ClawWatch on the watch."
+echo "Done. Restart ClawWatch on the device."

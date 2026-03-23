@@ -1,10 +1,13 @@
 package com.thinkoff.clawwatch
 
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.Button
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -19,6 +22,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.graphics.Color
+import com.thinkoff.core.ui.ChatMessage
+import com.thinkoff.core.ui.SharedChatScreen
 
 class MainActivity : AppCompatActivity() {
 
@@ -131,6 +137,18 @@ class MainActivity : AppCompatActivity() {
         binding.tabRooms.setOnClickListener { showTab(Tab.ROOMS) }
         binding.tabWatch.setOnClickListener { showTab(Tab.WATCH) }
         binding.sendButton.setOnClickListener { sendComposerMessage() }
+        binding.sendWhatsAppButton.setOnClickListener {
+            handoffComposerMessage(
+                packageName = "com.whatsapp",
+                appLabel = "WhatsApp"
+            )
+        }
+        binding.sendTelegramButton.setOnClickListener {
+            handoffComposerMessage(
+                packageName = "org.telegram.messenger",
+                appLabel = "Telegram"
+            )
+        }
         binding.refreshRoomButton.setOnClickListener { refreshActiveConversation() }
         binding.saveWatchSettingsButton.setOnClickListener { saveWatchSettings() }
         binding.googleSignInButton.setOnClickListener {
@@ -393,6 +411,32 @@ class MainActivity : AppCompatActivity() {
         sendAntFarmMessage(message)
     }
 
+    private fun handoffComposerMessage(
+        packageName: String,
+        appLabel: String
+    ) {
+        val message = binding.composerInput.text?.toString()?.trim().orEmpty()
+        if (message.isEmpty()) {
+            Toast.makeText(this, "Write a message first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            setPackage(packageName)
+            putExtra(Intent.EXTRA_TEXT, message)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val canHandle = intent.resolveActivity(packageManager) != null
+        if (!canHandle) {
+            Toast.makeText(this, "$appLabel is not installed", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        startActivity(intent)
+    }
+
     private fun sendAntFarmMessage(message: String) {
         val apiKey = getAntFarmKey()
         val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
@@ -439,15 +483,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderRoomMessages(forceScroll: Boolean = false) {
-        messageAdapter.notifyDataSetChanged()
-        binding.recyclerView.post {
-            if (roomMessages.isNotEmpty() && (forceScroll || autoScrollEnabled)) {
-                scrollToBottom(smooth = roomMessages.size > 1)
-            } else {
-                updateScrollToBottomFab()
-            }
+    private fun updateComposeChatView() {
+        binding.composeChatView.visibility = View.VISIBLE
+        binding.recyclerView.visibility = View.GONE
+        
+        val chatMessages = roomMessages.mapIndexed { index, localMsg ->
+            ChatMessage(
+                id = index.toString(),
+                text = localMsg.body,
+                isUser = localMsg.isUser
+            )
         }
+
+        binding.composeChatView.setContent {
+            SharedChatScreen(
+                title = activeRoomName ?: "Room",
+                accentColor = Color(0xFFD4A5E9), // ClawWatch Purple
+                messages = chatMessages,
+                onSendMessage = { text ->
+                    sendAntFarmMessage(text)
+                }
+            )
+        }
+    }
+
+    private fun renderRoomMessages(forceScroll: Boolean = false) {
+        updateComposeChatView()
     }
 
     private fun isNearBottom(threshold: Int = 2): Boolean {
@@ -479,6 +540,8 @@ class MainActivity : AppCompatActivity() {
     private fun setRoomLoadingState(loading: Boolean, message: String) {
         binding.refreshRoomButton.isEnabled = !loading
         binding.sendButton.isEnabled = !loading && isHumanReady()
+        binding.sendWhatsAppButton.isEnabled = !loading
+        binding.sendTelegramButton.isEnabled = !loading
         binding.loadRoomNowButton.isEnabled = !loading
         binding.openAntFarmRoomButton.isEnabled = !loading
         binding.roomStatus.text = message

@@ -50,6 +50,12 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/composeChatView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/roomPanel"
             android:layout_width="match_parent"
@@ -189,6 +195,26 @@
                             android:maxLines="4"
                             android:minLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sendWhatsAppButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="0dp"
+                        android:text="WA"
+                        android:textAllCaps="false" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sendTelegramButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="0dp"
+                        android:text="TG"
+                        android:textAllCaps="false" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/sendButton"

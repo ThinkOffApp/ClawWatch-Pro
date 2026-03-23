@@ -20,7 +20,9 @@
             <solid android:color="#80FFF8F1" />
             <stroke
                 android:width="2dp"
-                android:color="#80101010" />
+                android:color="#80101010"
+                android:dashWidth="5dp"
+                android:dashGap="3dp" />
             <corners android:radius="24dp" />
         </shape>
     </item>
@@ -44,7 +46,9 @@
             <solid android:color="#80FFF8F1" />
             <stroke
                 android:width="2dp"
-                android:color="#80101010" />
+                android:color="#80101010"
+                android:dashWidth="5dp"
+                android:dashGap="3dp" />
         </shape>
     </item>
 
@@ -67,7 +71,9 @@
             <solid android:color="#80FFF8F1" />
             <stroke
                 android:width="2dp"
-                android:color="#80101010" />
+                android:color="#80101010"
+                android:dashWidth="5dp"
+                android:dashGap="3dp" />
         </shape>
     </item>
 </layer-list>

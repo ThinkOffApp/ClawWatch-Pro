@@ -1,0 +1,315 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		37ADCB65C8939910358F1FBC /* AnthropicClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391DD316C4FB09F2111737FF /* AnthropicClient.swift */; };
+		39856C966DC69CC419CD8308 /* ClawWatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DEBD1776D639F24F353CBD /* ClawWatchViewModel.swift */; };
+		405BED811C4D5FA8FE9151FC /* ClawState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FDBD95E12DD0B2C21BCB3B6 /* ClawState.swift */; };
+		5A8B5B8176594EEDB950A3B1 /* AntFarmClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C777FBFA3D0213A3AAE85FB /* AntFarmClient.swift */; };
+		5E6A18056976B039EE2F7D5E /* ClawWatchAppleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D918AFC331D6C3D805E5D5 /* ClawWatchAppleApp.swift */; };
+		5F318CB24BF99C083F4B3F7B /* ClawAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E7030E43CFE5B9C99135E0 /* ClawAvatarView.swift */; };
+		6F63E1AC2F48A19DDB3C85E1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B138DDF8F166DE3B0A0E7987 /* ContentView.swift */; };
+		718365B7812D432CB874FAE1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 564ABDA2B6E856BF2F711D8D /* SettingsView.swift */; };
+		82FDF6013708716002D7EA36 /* ClawWatchSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F636A1B3FF07D83535ECC98C /* ClawWatchSettings.swift */; };
+		8BCB97FA8A07D3384F97C2D1 /* BubbleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62BDA7BFD9C9F9793796074 /* BubbleViews.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0C777FBFA3D0213A3AAE85FB /* AntFarmClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntFarmClient.swift; sourceTree = "<group>"; };
+		17DEBD1776D639F24F353CBD /* ClawWatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawWatchViewModel.swift; sourceTree = "<group>"; };
+		34E7030E43CFE5B9C99135E0 /* ClawAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawAvatarView.swift; sourceTree = "<group>"; };
+		391DD316C4FB09F2111737FF /* AnthropicClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicClient.swift; sourceTree = "<group>"; };
+		564ABDA2B6E856BF2F711D8D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9FDBD95E12DD0B2C21BCB3B6 /* ClawState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawState.swift; sourceTree = "<group>"; };
+		A59E4B1CCAD8FFFFD6AF5F11 /* ClawWatchApple.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClawWatchApple.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B138DDF8F166DE3B0A0E7987 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B5D918AFC331D6C3D805E5D5 /* ClawWatchAppleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawWatchAppleApp.swift; sourceTree = "<group>"; };
+		C62BDA7BFD9C9F9793796074 /* BubbleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BubbleViews.swift; sourceTree = "<group>"; };
+		F636A1B3FF07D83535ECC98C /* ClawWatchSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawWatchSettings.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3257F543F2490FC0DB4211DE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A59E4B1CCAD8FFFFD6AF5F11 /* ClawWatchApple.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		594F01F388B7DDCB3CACE83E = {
+			isa = PBXGroup;
+			children = (
+				D8B64475F22EE30AE3C58E4F /* Sources */,
+				3257F543F2490FC0DB4211DE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D8B64475F22EE30AE3C58E4F /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				0C777FBFA3D0213A3AAE85FB /* AntFarmClient.swift */,
+				391DD316C4FB09F2111737FF /* AnthropicClient.swift */,
+				C62BDA7BFD9C9F9793796074 /* BubbleViews.swift */,
+				34E7030E43CFE5B9C99135E0 /* ClawAvatarView.swift */,
+				9FDBD95E12DD0B2C21BCB3B6 /* ClawState.swift */,
+				B5D918AFC331D6C3D805E5D5 /* ClawWatchAppleApp.swift */,
+				F636A1B3FF07D83535ECC98C /* ClawWatchSettings.swift */,
+				17DEBD1776D639F24F353CBD /* ClawWatchViewModel.swift */,
+				B138DDF8F166DE3B0A0E7987 /* ContentView.swift */,
+				564ABDA2B6E856BF2F711D8D /* SettingsView.swift */,
+			);
+			name = Sources;
+			path = ClawWatchApple/Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4EFB3FE88C6C3BEFF36E0771 /* ClawWatchApple */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1682856EDD364F2413432926 /* Build configuration list for PBXNativeTarget "ClawWatchApple" */;
+			buildPhases = (
+				D95B049BBAE315101BC12534 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClawWatchApple;
+			packageProductDependencies = (
+			);
+			productName = ClawWatchApple;
+			productReference = A59E4B1CCAD8FFFFD6AF5F11 /* ClawWatchApple.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		744F627FC0B12EC521ABDB2E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = AF3D58BA6D6AB1957D951A1A /* Build configuration list for PBXProject "ClawWatchApple" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 594F01F388B7DDCB3CACE83E;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3257F543F2490FC0DB4211DE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4EFB3FE88C6C3BEFF36E0771 /* ClawWatchApple */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D95B049BBAE315101BC12534 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A8B5B8176594EEDB950A3B1 /* AntFarmClient.swift in Sources */,
+				37ADCB65C8939910358F1FBC /* AnthropicClient.swift in Sources */,
+				8BCB97FA8A07D3384F97C2D1 /* BubbleViews.swift in Sources */,
+				5F318CB24BF99C083F4B3F7B /* ClawAvatarView.swift in Sources */,
+				405BED811C4D5FA8FE9151FC /* ClawState.swift in Sources */,
+				5E6A18056976B039EE2F7D5E /* ClawWatchAppleApp.swift in Sources */,
+				82FDF6013708716002D7EA36 /* ClawWatchSettings.swift in Sources */,
+				39856C966DC69CC419CD8308 /* ClawWatchViewModel.swift in Sources */,
+				6F63E1AC2F48A19DDB3C85E1 /* ContentView.swift in Sources */,
+				718365B7812D432CB874FAE1 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0CEF0246030C941E5A81F2F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = ClawWatch;
+				SDKROOT = watchos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		42539EDF6507F8C92855734F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = ClawWatchApple/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thinkoff.clawwatch.applewatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		5E5F0A726B3724DD1481561E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = ClawWatch;
+				SDKROOT = watchos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		824529CF98BC8D832C4566DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = ClawWatchApple/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thinkoff.clawwatch.applewatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1682856EDD364F2413432926 /* Build configuration list for PBXNativeTarget "ClawWatchApple" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				824529CF98BC8D832C4566DA /* Debug */,
+				42539EDF6507F8C92855734F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF3D58BA6D6AB1957D951A1A /* Build configuration list for PBXProject "ClawWatchApple" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E5F0A726B3724DD1481561E /* Debug */,
+				0CEF0246030C941E5A81F2F9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 744F627FC0B12EC521ABDB2E /* Project object */;
+}

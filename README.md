@@ -12,6 +12,7 @@ This repo shares core code with the [open source ClawWatch](https://github.com/T
 
 - `origin` = this private repo (ThinkOffApp/ClawWatch-Pro)
 - `upstream` = open source repo (ThinkOffApp/ClawWatch)
+- `apple-watch/` = native watchOS ClawWatch app scaffold and Xcode project
 
 ## Syncing from upstream
 
@@ -34,6 +35,17 @@ git merge upstream/main
 echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
   ./gradlew assembleRelease
+```
+
+## Apple Watch App
+
+The repo now includes a native watchOS app under [apple-watch/README.md](/Users/petrus/AndroidStudioProjects/ClawWatch-Pro/apple-watch/README.md).
+
+Generate the Xcode project with:
+
+```bash
+cd apple-watch
+xcodegen generate
 ```
 
 ## License
