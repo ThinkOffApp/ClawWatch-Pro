@@ -1,5 +1,6 @@
 package com.thinkoff.clawwatch
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -8,12 +9,14 @@ import android.text.InputType
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.thinkoff.clawwatch.databinding.ItemChannelBinding
 import com.thinkoff.clawwatch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -41,6 +44,12 @@ class MainActivity : AppCompatActivity() {
         private const val LOCAL_OWNER_NAME = "Local owner"
         private const val IDE_ROOM_THINKOFF_DEVELOPMENT = "thinkoff-development"
         private const val IDE_ROOM_ANT_FARM_MANAGEMENT = "ant-farm-management"
+        private val IDE_DIRECT_TARGETS = listOf(
+            "@claudeMB",
+            "@geminiMB",
+            "@CodexMB",
+            "@claudemm"
+        )
     }
 
     private enum class Tab(
@@ -48,16 +57,16 @@ class MainActivity : AppCompatActivity() {
         val subtitle: String
     ) {
         ROOM(
-            title = "Room",
-            subtitle = "Chat with your live room."
+            title = "Conversation",
+            subtitle = "Live channel discussion."
         ),
         ROOMS(
-            title = "Rooms",
-            subtitle = "Choose the room target for chat."
+            title = "Channels",
+            subtitle = "Choose a room or IDE channel."
         ),
         WATCH(
             title = "Account",
-            subtitle = "Google sign-in and room setup."
+            subtitle = "Owner sign-in, nickname, and defaults."
         )
     }
 
@@ -66,14 +75,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var googleSignInManager: GoogleSignInManager
     private val antFarmClient = AntFarmClient()
     private val roomMessages = mutableListOf<LocalMessage>()
+    private val channelItems = mutableListOf<ChannelItem>()
+    private val channelPreviewOverrides = mutableMapOf<String, String>()
+    private val recentDirectChannels = linkedMapOf<String, ChannelItem>()
     private lateinit var messageAdapter: RoomMessageAdapter
     private lateinit var roomLayoutManager: LinearLayoutManager
     private var autoScrollEnabled = true
-    private var activeTab: Tab = Tab.ROOM
+    private var activeTab: Tab = Tab.ROOMS
     private var activeRoomSlug: String = DEFAULT_ROOM
     private var activeRoomName: String = "Family room"
+    private var activeTargetKind: TargetKind = TargetKind.ROOM
     private val localTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val isoTimeFormat = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+    private val backPressedCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            if (activeTab != Tab.ROOMS) {
+                showTab(Tab.ROOMS)
+            }
+        }
+    }
     private val googleSignInLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             googleSignInManager.handleSignInResult(result.data)
@@ -105,6 +125,11 @@ class MainActivity : AppCompatActivity() {
                 }
         }
 
+    private enum class TargetKind {
+        ROOM,
+        IDE
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -114,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         
         prefs = SecurePrefs.watch(this)
         googleSignInManager = GoogleSignInManager(this)
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
         messageAdapter = RoomMessageAdapter(roomMessages)
 
         roomLayoutManager = LinearLayoutManager(this).apply {
@@ -136,6 +162,14 @@ class MainActivity : AppCompatActivity() {
         binding.tabRoom.setOnClickListener { showTab(Tab.ROOM) }
         binding.tabRooms.setOnClickListener { showTab(Tab.ROOMS) }
         binding.tabWatch.setOnClickListener { showTab(Tab.WATCH) }
+        binding.headerBackButton.setOnClickListener { showTab(Tab.ROOMS) }
+        binding.headerActionButton.setOnClickListener {
+            if (activeTab == Tab.WATCH) {
+                showTab(Tab.ROOMS)
+            } else {
+                showTab(Tab.WATCH)
+            }
+        }
         binding.sendButton.setOnClickListener { sendComposerMessage() }
         binding.sendWhatsAppButton.setOnClickListener {
             handoffComposerMessage(
@@ -159,24 +193,6 @@ class MainActivity : AppCompatActivity() {
         binding.loadRoomNowButton.setOnClickListener {
             refreshActiveConversation(switchToRoom = true)
         }
-        binding.openAntFarmRoomButton.setOnClickListener {
-            openRoomTarget(
-                roomSlug = getConfiguredRoom(),
-                roomName = "Family room"
-            )
-        }
-        binding.openThinkoffDevelopmentButton.setOnClickListener {
-            openRoomTarget(
-                roomSlug = IDE_ROOM_THINKOFF_DEVELOPMENT,
-                roomName = "thinkoff-development"
-            )
-        }
-        binding.openAntFarmManagementButton.setOnClickListener {
-            openRoomTarget(
-                roomSlug = IDE_ROOM_ANT_FARM_MANAGEMENT,
-                roomName = "ant-farm-management"
-            )
-        }
 
         binding.composerInput.inputType = InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
@@ -185,36 +201,60 @@ class MainActivity : AppCompatActivity() {
         loadSavedSettings()
         seedInitialMessages()
         renderRoomMessages(forceScroll = true)
-        showTab(Tab.ROOM)
+        showTab(Tab.ROOMS, animate = false)
 
         if (hasRoomConfig()) {
             refreshAntFarmRoom()
         }
     }
 
-    private fun showTab(tab: Tab) {
+    override fun onResume() {
+        super.onResume()
+        refreshRecentDirectChannels()
+    }
+
+    private fun showTab(tab: Tab, animate: Boolean = true) {
+        val previousTab = activeTab
         activeTab = tab
         applyHeader()
+        updateHeaderActions()
 
-        binding.roomPanel.alpha = if (tab == Tab.ROOM) 1f else 0f
-        binding.roomsPanel.alpha = if (tab == Tab.ROOMS) 1f else 0f
-        binding.watchPanel.alpha = if (tab == Tab.WATCH) 1f else 0f
+        if (tab == Tab.ROOM) {
+            updateComposeChatView()
+        } else {
+            binding.composeChatView.visibility = View.GONE
+        }
 
-        binding.roomPanel.visibility = if (tab == Tab.ROOM) View.VISIBLE else View.GONE
-        binding.roomsPanel.visibility = if (tab == Tab.ROOMS) View.VISIBLE else View.GONE
-        binding.watchPanel.visibility = if (tab == Tab.WATCH) View.VISIBLE else View.GONE
+        transitionPanel(
+            panel = binding.roomPanel,
+            show = tab == Tab.ROOM,
+            enterFromRight = previousTab != Tab.ROOM && tab == Tab.ROOM,
+            animate = animate
+        )
+        transitionPanel(
+            panel = binding.roomsPanel,
+            show = tab == Tab.ROOMS,
+            enterFromRight = previousTab == Tab.WATCH && tab == Tab.ROOMS,
+            animate = animate
+        )
+        transitionPanel(
+            panel = binding.watchPanel,
+            show = tab == Tab.WATCH,
+            enterFromRight = true,
+            animate = animate
+        )
 
         styleTab(binding.tabRoom, active = tab == Tab.ROOM)
         styleTab(binding.tabRooms, active = tab == Tab.ROOMS)
         styleTab(binding.tabWatch, active = tab == Tab.WATCH)
-        styleModeButton(binding.openAntFarmRoomButton, active = true)
+        backPressedCallback.isEnabled = tab != Tab.ROOMS
     }
 
     private fun applyHeader() {
         when (activeTab) {
             Tab.ROOM -> {
                 binding.headerTitle.text = activeRoomName
-                binding.headerSubtitle.text = "Live Ant Farm room timeline and messaging."
+                binding.headerSubtitle.text = "Live channel discussion."
             }
             else -> {
                 binding.headerTitle.text = activeTab.title
@@ -223,14 +263,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun styleTab(button: Button, active: Boolean) {
-        val background = if (active) R.color.tab_active else R.color.tab_inactive
-        val foreground = if (active) R.color.tab_active_text else R.color.tab_inactive_text
-        button.backgroundTintList = ContextCompat.getColorStateList(this, background)
-        button.setTextColor(ContextCompat.getColor(this, foreground))
+    private fun updateHeaderActions() {
+        binding.headerBackButton.visibility = if (activeTab == Tab.ROOMS) View.GONE else View.VISIBLE
+        binding.headerActionButton.text = if (activeTab == Tab.WATCH) "Channels" else "Account"
     }
 
-    private fun styleModeButton(button: Button, active: Boolean) {
+    private fun transitionPanel(
+        panel: View,
+        show: Boolean,
+        enterFromRight: Boolean,
+        animate: Boolean
+    ) {
+        if (!animate) {
+            panel.animate().cancel()
+            panel.visibility = if (show) View.VISIBLE else View.GONE
+            panel.alpha = 1f
+            panel.translationX = 0f
+            return
+        }
+
+        val travel = panel.resources.displayMetrics.density * 28f
+        val offset = if (enterFromRight) travel else -travel
+
+        if (show) {
+            if (panel.visibility == View.VISIBLE) return
+            panel.animate().cancel()
+            panel.visibility = View.VISIBLE
+            panel.alpha = 0f
+            panel.translationX = offset
+            panel.animate()
+                .alpha(1f)
+                .translationX(0f)
+                .setDuration(180L)
+                .start()
+        } else if (panel.visibility == View.VISIBLE) {
+            panel.animate().cancel()
+            panel.animate()
+                .alpha(0f)
+                .translationX(-offset / 2f)
+                .setDuration(140L)
+                .withEndAction {
+                    panel.visibility = View.GONE
+                    panel.alpha = 1f
+                    panel.translationX = 0f
+                }
+                .start()
+        }
+    }
+
+    private fun styleTab(button: Button, active: Boolean) {
         val background = if (active) R.color.tab_active else R.color.tab_inactive
         val foreground = if (active) R.color.tab_active_text else R.color.tab_inactive_text
         button.backgroundTintList = ContextCompat.getColorStateList(this, background)
@@ -244,6 +325,7 @@ class MainActivity : AppCompatActivity() {
         updateRoomsUi()
         googleSignInManager.getCurrentUser()?.let { persistSignedInUser(it, updateUi = false) }
         updateOwnerUi()
+        refreshRecentDirectChannels()
     }
 
     private fun ensureInternalTestDefaults() {
@@ -268,6 +350,7 @@ class MainActivity : AppCompatActivity() {
 
         activeRoomSlug = getConfiguredRoom()
         activeRoomName = "Family room"
+        channelPreviewOverrides.remove(activeRoomSlug)
         updateRoomsUi()
         binding.roomStatus.text = if (isHumanReady()) "Settings saved" else "Finish owner setup first"
         binding.roomPresenceChip.text = "Saved"
@@ -301,7 +384,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshAntFarmRoom() {
         val apiKey = getAntFarmKey()
-        val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
+        val target = activeRoomSlug.ifBlank { getConfiguredRoom() }
+        val targetKind = classifyTarget(target)
 
         if (!isSignedInWithGoogle()) {
             activeRoomName = "Family room"
@@ -354,40 +438,113 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        setRoomLoadingState(loading = true, message = "Syncing $room…")
+        setRoomLoadingState(loading = true, message = "Syncing $target…")
+        channelPreviewOverrides[target] = "Syncing conversation..."
+        updateRoomsUi()
+        refreshRecentDirectChannels(updateUi = false)
         lifecycleScope.launch {
-            antFarmClient.fetchRoomMessages(room, apiKey)
-                .onSuccess { feed ->
-                    activeRoomSlug = feed.roomSlug
-                    activeRoomName = displayNameForRoom(feed.roomSlug, fallback = feed.roomName)
-                    binding.roomStatus.text = "Connected • ${feed.roomSlug} • ${feed.messages.size} messages"
-                    binding.roomPresenceChip.text = "Live"
-                    binding.roomHint.text =
-                        "Signed in as ${getCurrentNickname()} • live room traffic is active."
+            val googleIdToken = if (targetKind == TargetKind.IDE) {
+                googleSignInManager.getFreshIdToken()
+            } else {
+                null
+            }
 
-                    roomMessages.clear()
-                    roomMessages += feed.messages.map {
-                        LocalMessage(
-                            author = it.from,
-                            body = it.body,
-                            timestamp = formatTimestamp(it.createdAt),
-                            isUser = false
-                        )
+            if (targetKind == TargetKind.IDE && googleIdToken.isNullOrBlank()) {
+                activeRoomName = displayNameForRoom(target, fallback = target)
+                roomMessages.clear()
+                roomMessages += LocalMessage(
+                    author = "ClawWatch",
+                    body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
+                    timestamp = nowTime(),
+                    isUser = false
+                )
+                binding.roomStatus.text = "Google reauth needed"
+                binding.roomPresenceChip.text = "Setup"
+                binding.roomHint.text = "Google ID token is missing for human IDE messaging."
+                channelPreviewOverrides[target] = "Google reauth needed."
+                applyHeader()
+                updateRoomsUi()
+                renderRoomMessages(forceScroll = true)
+                setRoomLoadingState(loading = false, message = "Google reauth needed")
+                return@launch
+            }
+
+            val result = when (targetKind) {
+                TargetKind.ROOM -> antFarmClient.fetchRoomMessages(target, apiKey)
+                    .map { feed ->
+                        activeRoomSlug = feed.roomSlug
+                        activeRoomName = displayNameForRoom(feed.roomSlug, fallback = feed.roomName)
+                        activeTargetKind = TargetKind.ROOM
+                        binding.roomStatus.text = "Connected • ${feed.roomSlug} • ${feed.messages.size} messages"
+                        binding.roomPresenceChip.text = "Live"
+                        binding.roomHint.text =
+                            "Signed in as ${getCurrentNickname()} • live room traffic is active."
+
+                        roomMessages.clear()
+                        roomMessages += feed.messages.map {
+                            LocalMessage(
+                                author = it.from,
+                                body = it.body,
+                                timestamp = formatTimestamp(it.createdAt),
+                                isUser = false
+                            )
+                        }
+                        if (roomMessages.isEmpty()) {
+                            roomMessages += LocalMessage(
+                                author = "ClawWatch",
+                                body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
+                                timestamp = nowTime(),
+                                isUser = false
+                            )
+                        }
+                        channelPreviewOverrides[feed.roomSlug] =
+                            roomMessages.lastOrNull()?.body?.take(96) ?: "No messages yet."
                     }
-                    if (roomMessages.isEmpty()) {
-                        roomMessages += LocalMessage(
-                            author = "ClawWatch",
-                            body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
-                            timestamp = nowTime(),
-                            isUser = false
-                        )
+                TargetKind.IDE -> antFarmClient.fetchDirectMessagesAsHuman(target, googleIdToken!!)
+                    .map { feed ->
+                        activeRoomSlug = feed.target
+                        activeRoomName = displayNameForRoom(feed.target, fallback = feed.target)
+                        activeTargetKind = TargetKind.IDE
+                        binding.roomStatus.text = "Connected • ${feed.target} • ${feed.messages.size} messages"
+                        binding.roomPresenceChip.text = "Live"
+                        binding.roomHint.text =
+                            "Signed in as ${getCurrentNickname()} • direct IDE messaging is active."
+
+                        roomMessages.clear()
+                        roomMessages += feed.messages.map {
+                            LocalMessage(
+                                author = it.from,
+                                body = it.body,
+                                timestamp = formatTimestamp(it.createdAt),
+                                isUser = false
+                            )
+                        }
+                        if (roomMessages.isEmpty()) {
+                            roomMessages += LocalMessage(
+                                author = "ClawWatch",
+                                body = "No direct messages yet with ${feed.target}. Send one to start the test.",
+                                timestamp = nowTime(),
+                                isUser = false
+                            )
+                        }
+                        channelPreviewOverrides[feed.target] =
+                            roomMessages.lastOrNull()?.body?.take(96) ?: "No messages yet."
                     }
+            }
+
+            result
+                .onSuccess {
                     applyHeader()
+                    refreshRecentDirectChannels(updateUi = false)
+                    updateRoomsUi()
                     renderRoomMessages(forceScroll = true)
-                    setRoomLoadingState(loading = false, message = "Room live")
+                    setRoomLoadingState(
+                        loading = false,
+                        message = if (targetKind == TargetKind.ROOM) "Room live" else "IDE live"
+                    )
                 }
                 .onFailure { error ->
-                    activeRoomName = displayNameForRoom(room, fallback = room)
+                    activeRoomName = displayNameForRoom(target, fallback = target)
                     roomMessages.clear()
                     roomMessages += LocalMessage(
                         author = "ClawWatch",
@@ -395,10 +552,13 @@ class MainActivity : AppCompatActivity() {
                         timestamp = nowTime(),
                         isUser = false
                     )
-                    binding.roomStatus.text = "Connection failed for $room"
+                    binding.roomStatus.text = "Connection failed for $target"
                     binding.roomPresenceChip.text = "Error"
                     binding.roomHint.text = "Check the saved room slug and try again."
+                    channelPreviewOverrides[target] = "Load failed."
                     applyHeader()
+                    refreshRecentDirectChannels(updateUi = false)
+                    updateRoomsUi()
                     renderRoomMessages(forceScroll = true)
                     setRoomLoadingState(loading = false, message = "Load failed")
                 }
@@ -427,19 +587,17 @@ class MainActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_TEXT, message)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-
-        val canHandle = intent.resolveActivity(packageManager) != null
-        if (!canHandle) {
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
             Toast.makeText(this, "$appLabel is not installed", Toast.LENGTH_SHORT).show()
-            return
         }
-
-        startActivity(intent)
     }
 
     private fun sendAntFarmMessage(message: String) {
         val apiKey = getAntFarmKey()
-        val room = activeRoomSlug.ifBlank { getConfiguredRoom() }
+        val target = activeRoomSlug.ifBlank { getConfiguredRoom() }
+        val targetKind = classifyTarget(target)
         if (!isHumanReady()) {
             roomMessages += LocalMessage(
                 "ClawWatch",
@@ -463,12 +621,36 @@ class MainActivity : AppCompatActivity() {
             timestamp = nowTime(),
             isUser = true
         )
+        channelPreviewOverrides[target] = message.take(96)
         binding.composerInput.text?.clear()
+        updateRoomsUi()
         renderRoomMessages(forceScroll = true)
         setRoomLoadingState(loading = true, message = "Sending…")
 
         lifecycleScope.launch {
-            antFarmClient.sendRoomMessage(room, apiKey, message)
+            val googleIdToken = if (targetKind == TargetKind.IDE) {
+                googleSignInManager.getFreshIdToken()
+            } else {
+                null
+            }
+
+            if (targetKind == TargetKind.IDE && googleIdToken.isNullOrBlank()) {
+                roomMessages += LocalMessage(
+                    author = "ClawWatch",
+                    body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
+                    timestamp = nowTime(),
+                    isUser = false
+                )
+                setRoomLoadingState(loading = false, message = "Google reauth needed")
+                renderRoomMessages()
+                return@launch
+            }
+
+            val result = when (targetKind) {
+                TargetKind.ROOM -> antFarmClient.sendRoomMessage(target, apiKey, message)
+                TargetKind.IDE -> antFarmClient.sendDirectMessageAsHuman(target, googleIdToken!!, message)
+            }
+            result
                 .onSuccess { refreshAntFarmRoom() }
                 .onFailure { error ->
                     roomMessages += LocalMessage(
@@ -543,7 +725,6 @@ class MainActivity : AppCompatActivity() {
         binding.sendWhatsAppButton.isEnabled = !loading
         binding.sendTelegramButton.isEnabled = !loading
         binding.loadRoomNowButton.isEnabled = !loading
-        binding.openAntFarmRoomButton.isEnabled = !loading
         binding.roomStatus.text = message
         if (loading) {
             binding.roomPresenceChip.text = "Syncing"
@@ -571,15 +752,147 @@ class MainActivity : AppCompatActivity() {
             .filter { it.isNotBlank() }
             .ifEmpty { listOf(DEFAULT_ROOM) }
 
+    private fun classifyTarget(target: String): TargetKind {
+        val normalized = target.trim().removePrefix("@")
+        return if (
+            target.trim().startsWith("@") ||
+            IDE_DIRECT_TARGETS.any { it.removePrefix("@").equals(normalized, ignoreCase = true) }
+        ) {
+            TargetKind.IDE
+        } else {
+            TargetKind.ROOM
+        }
+    }
+
     private fun openRoomTarget(roomSlug: String, roomName: String) {
         activeRoomSlug = roomSlug
         activeRoomName = roomName
+        activeTargetKind = classifyTarget(roomSlug)
         applyHeader()
+        channelPreviewOverrides[roomSlug] = channelPreviewOverrides[roomSlug] ?: "Opening conversation..."
+        updateRoomsUi()
         refreshActiveConversation(switchToRoom = true)
     }
 
+    private fun refreshRecentDirectChannels(updateUi: Boolean = true) {
+        val currentGoogleUser = googleSignInManager.getCurrentUser()
+        if (currentGoogleUser == null) {
+            recentDirectChannels.clear()
+            if (updateUi) updateRoomsUi()
+            return
+        }
+
+        if (!isSignedInWithGoogle()) {
+            persistSignedInUser(currentGoogleUser, updateUi = false)
+        }
+
+        lifecycleScope.launch {
+            val googleIdToken = googleSignInManager.getFreshIdToken()
+            if (googleIdToken.isNullOrBlank()) {
+                return@launch
+            }
+
+            antFarmClient.fetchRecentDirectThreadsAsHuman(googleIdToken)
+                .onSuccess { threads ->
+                    recentDirectChannels.clear()
+                    threads.forEach { thread ->
+                        recentDirectChannels[thread.target] = ChannelItem(
+                            slug = thread.target,
+                            title = thread.target,
+                            preview = thread.preview
+                        )
+                    }
+                    if (updateUi) {
+                        updateRoomsUi()
+                    }
+                }
+        }
+    }
+
     private fun updateRoomsUi() {
-        binding.familyRoomSummary.text = "Saved room slug: ${getConfiguredRoom()}"
+        binding.familyRoomSummary.text = "Family room: ${getConfiguredRoom()} · plus recent DMs and IDE channels"
+        channelItems.clear()
+        channelItems.addAll(buildChannelItems())
+        binding.channelsListContainer.removeAllViews()
+        val inflater = layoutInflater
+        channelItems.forEach { channel ->
+            val itemBinding = ItemChannelBinding.inflate(inflater, binding.channelsListContainer, false)
+            itemBinding.channelSource.text = channel.title
+            itemBinding.channelLatestMessage.text = channel.preview
+            itemBinding.root.setOnClickListener {
+                openRoomTarget(channel.slug, channel.title)
+            }
+            binding.channelsListContainer.addView(itemBinding.root)
+        }
+    }
+
+    private fun buildChannelItems(): List<ChannelItem> {
+        val configuredRoom = getConfiguredRoom()
+        val items = linkedMapOf<String, ChannelItem>()
+
+        items[configuredRoom] = ChannelItem(
+            slug = configuredRoom,
+            title = "Family room",
+            preview = channelPreviewFor(configuredRoom)
+        )
+
+        listOf(IDE_ROOM_THINKOFF_DEVELOPMENT, IDE_ROOM_ANT_FARM_MANAGEMENT)
+            .filter { it != configuredRoom }
+            .forEach { slug ->
+                items[slug] = ChannelItem(
+                    slug = slug,
+                    title = slug,
+                    preview = channelPreviewFor(slug)
+                )
+            }
+
+        recentDirectChannels.values.forEach { channel ->
+            items.putIfAbsent(
+                channel.slug,
+                ChannelItem(
+                    slug = channel.slug,
+                    title = channel.title,
+                    preview = channelPreviewFor(channel.slug)
+                )
+            )
+        }
+
+        IDE_DIRECT_TARGETS.forEach { slug ->
+            items.putIfAbsent(
+                slug,
+                ChannelItem(
+                    slug = slug,
+                    title = slug,
+                    preview = channelPreviewFor(slug)
+                )
+            )
+        }
+
+        return items.values.map { item ->
+            ChannelItem(
+                slug = item.slug,
+                title = item.title,
+                preview = item.preview
+            )
+        }
+    }
+
+    private fun channelPreviewFor(slug: String): String {
+        channelPreviewOverrides[slug]?.takeIf { it.isNotBlank() }?.let { return it }
+        recentDirectChannels[slug]?.preview?.takeIf { it.isNotBlank() }?.let { return it }
+        if (slug == activeRoomSlug) {
+            roomMessages.lastOrNull()?.body?.takeIf { it.isNotBlank() }?.let { return it.take(96) }
+        }
+        return when (slug) {
+            getConfiguredRoom() -> "Your ClawWatch family conversation."
+            IDE_ROOM_THINKOFF_DEVELOPMENT -> "IDE channel · team development."
+            IDE_ROOM_ANT_FARM_MANAGEMENT -> "IDE channel · ops and management."
+            "@claudeMB" -> "Direct IDE chat · ClaudeMB."
+            "@geminiMB" -> "Direct IDE chat · geminiMB."
+            "@CodexMB" -> "Direct IDE chat · CodexMB."
+            "@claudemm" -> "Direct IDE chat · ClaudeMM."
+            else -> "Open channel."
+        }
     }
 
     private fun displayNameForRoom(roomSlug: String, fallback: String = roomSlug): String =
@@ -588,6 +901,8 @@ class MainActivity : AppCompatActivity() {
             roomSlug == IDE_ROOM_THINKOFF_DEVELOPMENT -> "thinkoff-development"
             roomSlug == IDE_ROOM_ANT_FARM_MANAGEMENT -> "ant-farm-management"
             roomSlug == getConfiguredRoom() -> "Family room"
+            recentDirectChannels.containsKey(roomSlug) -> recentDirectChannels[roomSlug]?.title ?: roomSlug
+            IDE_DIRECT_TARGETS.any { it.equals(roomSlug, ignoreCase = true) } -> roomSlug
             else -> fallback
         }
 
@@ -620,6 +935,7 @@ class MainActivity : AppCompatActivity() {
 
         if (updateUi) {
             updateOwnerUi()
+            refreshRecentDirectChannels()
         }
     }
 
@@ -670,8 +986,10 @@ class MainActivity : AppCompatActivity() {
             .remove(PREF_HUMAN_AVATAR_URL)
             .remove(PREF_LOCAL_OWNER_MODE)
             .apply()
+        recentDirectChannels.clear()
         binding.nicknameInput.text?.clear()
         updateOwnerUi()
+        updateRoomsUi()
         binding.roomStatus.text = "Signed out"
         binding.roomPresenceChip.text = "Setup"
         binding.roomHint.text = "Sign in with Google in the Account tab to use the room."

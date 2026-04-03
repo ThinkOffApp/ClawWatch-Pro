@@ -8,17 +8,22 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.tasks.Tasks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class SignedInGoogleUser(
     val email: String,
     val displayName: String?,
-    val avatarUrl: String?
+    val avatarUrl: String?,
+    val idToken: String?
 )
 
 class GoogleSignInManager(private val context: Context) {
     private val googleSignInClient: GoogleSignInClient by lazy {
         val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
+            .requestIdToken(context.getString(R.string.google_web_client_id))
             .build()
         GoogleSignIn.getClient(context, options)
     }
@@ -47,6 +52,16 @@ class GoogleSignInManager(private val context: Context) {
         googleSignInClient.signOut()
     }
 
+    suspend fun getFreshIdToken(): String? = withContext(Dispatchers.IO) {
+        try {
+            val account = Tasks.await(googleSignInClient.silentSignIn())
+            account.idToken?.trim()?.takeIf { it.isNotBlank() }
+                ?: GoogleSignIn.getLastSignedInAccount(context)?.idToken?.trim()?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            GoogleSignIn.getLastSignedInAccount(context)?.idToken?.trim()?.takeIf { it.isNotBlank() }
+        }
+    }
+
     private fun GoogleSignInAccount.toSignedInGoogleUser(): SignedInGoogleUser {
         val accountEmail = email?.trim().orEmpty()
             .ifBlank {
@@ -58,7 +73,8 @@ class GoogleSignInManager(private val context: Context) {
         return SignedInGoogleUser(
             email = accountEmail,
             displayName = displayName?.trim().orEmpty().ifBlank { null },
-            avatarUrl = photoUrl?.toString()
+            avatarUrl = photoUrl?.toString(),
+            idToken = idToken?.trim()?.takeIf { it.isNotBlank() }
         )
     }
 

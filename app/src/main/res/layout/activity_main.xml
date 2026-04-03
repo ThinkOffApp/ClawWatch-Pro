@@ -16,14 +16,52 @@
         android:paddingEnd="20dp"
         android:paddingBottom="14dp">
 
-        <TextView
-            android:id="@+id/headerEyebrow"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/clawwatch_html"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:letterSpacing="-0.02" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/headerEyebrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/clawwatch_html"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.02" />
+
+            <TextView
+                android:id="@+id/headerBackButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="10dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="8dp"
+                android:text="Back"
+                android:textAllCaps="true"
+                android:textColor="#9CA3AF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/headerActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:paddingStart="10dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="8dp"
+                android:text="Account"
+                android:textAllCaps="true"
+                android:textColor="#9CA3AF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/headerTitle"
@@ -241,26 +279,10 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Rooms"
-                    android:textColor="#FFFFFF"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Pick the room target you want to use in chat."
-                    android:textColor="#9CA3AF"
-                    android:textSize="14sp" />
-
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="4dp"
                     app:cardBackgroundColor="@color/bg_panel"
                     app:cardCornerRadius="20dp">
 
@@ -269,86 +291,22 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:padding="18dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Family room"
-                            android:textColor="#FFFFFF"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/familyRoomSummary"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Saved room slug: ant-farm-management"
-                            android:textColor="#D1D5DB"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Uses your saved room slug to load the shared room timeline."
+                            android:text="Family room plus IDE channels"
                             android:textColor="#9CA3AF"
                             android:textSize="14sp" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/openAntFarmRoomButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:text="Open family room"
-                            android:textAllCaps="false" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    app:cardBackgroundColor="@color/bg_panel"
-                    app:cardCornerRadius="20dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="18dp">
-
-                        <TextView
+                        <LinearLayout
+                            android:id="@+id/channelsListContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="IDE channels"
-                            android:textColor="#FFFFFF"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Open the live team channels directly from the companion app."
-                            android:textColor="#9CA3AF"
-                            android:textSize="14sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/openThinkoffDevelopmentButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="Open thinkoff-development"
-                            android:textAllCaps="false" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/openAntFarmManagementButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
-                            android:text="Open ant-farm-management"
-                            android:textAllCaps="false" />
+                            android:orientation="vertical"
+                            android:paddingBottom="4dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -543,6 +501,7 @@
     </FrameLayout>
 
     <LinearLayout
+        android:id="@+id/bottomTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/bg_panel"
@@ -551,7 +510,8 @@
         android:paddingStart="12dp"
         android:paddingTop="10dp"
         android:paddingEnd="12dp"
-        android:paddingBottom="14dp">
+        android:paddingBottom="14dp"
+        android:visibility="gone">
 
         <Button
             android:id="@+id/tabRoom"

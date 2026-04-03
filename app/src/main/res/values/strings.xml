@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="clawwatch_html"><![CDATA[<font color="#FFFFFF">claw</font><font color="#FF9F3C">watch</font>]]></string>
+    <string name="google_web_client_id">594749896867-6qgi900bjdso427kksn5773l5e9d118g.apps.googleusercontent.com</string>
 </resources>

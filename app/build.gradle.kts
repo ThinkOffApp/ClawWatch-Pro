@@ -60,4 +60,7 @@ dependencies {
 
     // Vosk STT
     implementation(libs.vosk.android)
+
+    // Health Connect
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
 }
