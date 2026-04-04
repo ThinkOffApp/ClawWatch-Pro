@@ -370,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             author = "ClawWatch",
             body = "Open Rooms to load your family room, then chat live.",
             timestamp = nowTime(),
-            isUser = false
+            isUser = (it.from == getCurrentNickname() || it.from == "petrus")
         )
         binding.roomHint.text = "Connected room state and message timeline appear here."
         binding.roomStatus.text = "Choose a room target to begin"
@@ -394,7 +394,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "Sign in with Google in the Account tab before loading your room.",
                 timestamp = nowTime(),
-                isUser = false
+                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
             )
             binding.roomHint.text = "Google sign-in is required before the room can load."
             binding.roomStatus.text = "Owner setup needed"
@@ -411,7 +411,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "Set your nickname in the Account tab before loading the family room.",
                 timestamp = nowTime(),
-                isUser = false
+                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
             )
             binding.roomHint.text = "Finish nickname setup to continue as this room owner."
             binding.roomStatus.text = "Nickname needed"
@@ -428,7 +428,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "The internal room transport is missing. Reload the app and try again.",
                 timestamp = nowTime(),
-                isUser = false
+                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
             )
             binding.roomHint.text = "The hidden room transport is not configured."
             binding.roomStatus.text = "Transport missing"
@@ -456,7 +456,7 @@ class MainActivity : AppCompatActivity() {
                     author = "ClawWatch",
                     body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
                     timestamp = nowTime(),
-                    isUser = false
+                    isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                 )
                 binding.roomStatus.text = "Google reauth needed"
                 binding.roomPresenceChip.text = "Setup"
@@ -486,7 +486,7 @@ class MainActivity : AppCompatActivity() {
                                 author = it.from,
                                 body = it.body,
                                 timestamp = formatTimestamp(it.createdAt),
-                                isUser = false
+                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                             )
                         }
                         if (roomMessages.isEmpty()) {
@@ -494,7 +494,7 @@ class MainActivity : AppCompatActivity() {
                                 author = "ClawWatch",
                                 body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
                                 timestamp = nowTime(),
-                                isUser = false
+                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                             )
                         }
                         channelPreviewOverrides[feed.roomSlug] =
@@ -516,7 +516,7 @@ class MainActivity : AppCompatActivity() {
                                 author = it.from,
                                 body = it.body,
                                 timestamp = formatTimestamp(it.createdAt),
-                                isUser = false
+                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                             )
                         }
                         if (roomMessages.isEmpty()) {
@@ -524,7 +524,7 @@ class MainActivity : AppCompatActivity() {
                                 author = "ClawWatch",
                                 body = "No direct messages yet with ${feed.target}. Send one to start the test.",
                                 timestamp = nowTime(),
-                                isUser = false
+                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                             )
                         }
                         channelPreviewOverrides[feed.target] =
@@ -550,7 +550,7 @@ class MainActivity : AppCompatActivity() {
                         author = "ClawWatch",
                         body = "Room load failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
-                        isUser = false
+                        isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                     )
                     binding.roomStatus.text = "Connection failed for $target"
                     binding.roomPresenceChip.text = "Error"
@@ -639,7 +639,7 @@ class MainActivity : AppCompatActivity() {
                     author = "ClawWatch",
                     body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
                     timestamp = nowTime(),
-                    isUser = false
+                    isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                 )
                 setRoomLoadingState(loading = false, message = "Google reauth needed")
                 renderRoomMessages()
@@ -657,7 +657,7 @@ class MainActivity : AppCompatActivity() {
                         author = "ClawWatch",
                         body = "Send failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
-                        isUser = false
+                        isUser = (it.from == getCurrentNickname() || it.from == "petrus")
                     )
                     setRoomLoadingState(loading = false, message = "Send failed")
                     renderRoomMessages()
