@@ -651,7 +651,9 @@ class MainActivity : AppCompatActivity() {
                 TargetKind.IDE -> antFarmClient.sendDirectMessageAsHuman(target, googleIdToken!!, message)
             }
             result
-                .onSuccess { refreshAntFarmRoom() }
+                .onSuccess { 
+                    setRoomLoadingState(loading = false, message = "Sent")
+                }
                 .onFailure { error ->
                     roomMessages += LocalMessage(
                         author = "ClawWatch",

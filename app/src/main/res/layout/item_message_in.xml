@@ -34,7 +34,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="@color/on_bubble_in"
-                android:textSize="15sp" />
+                android:textSize="15sp"
+                android:textIsSelectable="true" />
 
             <TextView
                 android:id="@+id/messageTime"
