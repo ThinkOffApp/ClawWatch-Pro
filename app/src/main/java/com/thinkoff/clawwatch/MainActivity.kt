@@ -735,31 +735,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateComposeChatView() {
-        binding.composeChatView.visibility = View.VISIBLE
-        binding.recyclerView.visibility = View.GONE
-        
-        val chatMessages = roomMessages.mapIndexed { index, localMsg ->
-            ChatMessage(
-                id = index.toString(),
-                text = localMsg.body,
-                isUser = localMsg.isUser
-            )
-        }
-
-        binding.composeChatView.setContent {
-            SharedChatScreen(
-                title = activeRoomName ?: "Room",
-                accentColor = Color(0xFFD4A5E9), // ClawWatch Purple
-                messages = chatMessages,
-                onSendMessage = { text ->
-                    sendAntFarmMessage(text)
-                }
-            )
-        }
+        // Use native RecyclerView with RoomMessageAdapter (shows usernames)
+        binding.composeChatView.visibility = View.GONE
+        binding.recyclerView.visibility = View.VISIBLE
     }
 
     private fun renderRoomMessages(forceScroll: Boolean = false) {
-        updateComposeChatView()
+        messageAdapter.notifyDataSetChanged()
+        if (forceScroll || autoScrollEnabled) {
+            scrollToBottom(smooth = !forceScroll)
+        }
     }
 
     private fun isNearBottom(threshold: Int = 2): Boolean {
