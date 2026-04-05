@@ -4,31 +4,26 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
- * On-device Gemma 4 E2B inference via MediaPipe LLM Inference API.
+ * On-device Gemma 4 E2B inference via Android AICore GenerativeModel.
  *
- * Used as tier-1 handler for simple queries to save Opus tokens.
+ * Uses the system-wide Gemma 4 model available on supported devices (S26 Ultra etc.)
+ * through the AICore Developer Preview / ML Kit GenAI API.
+ *
+ * Tier-1 handler for simple queries to save Opus tokens.
  * Returns ANSWER with response text, or ESCALATE to forward to watch ClawRunner.
  *
  * Escalation rules (always escalate):
  *  - Health/safety/vitals queries
  *  - Multi-turn reasoning
- *  - Tool use requests (web search, calculations)
- *  - Ambiguous or low-confidence results
+ *  - Tool use requests
+ *  - Low confidence / ambiguous results
  */
 class PhoneAgent(private val context: Context) {
 
     companion object {
         private const val TAG = "PhoneAgent"
-        // MediaPipe expects .bin model files
-        private val MODEL_FILENAMES = listOf(
-            "gemma-4-e2b-it.bin",
-            "gemma-4-e2b-it.task",
-            "gemma-2-2b-it-gpu-int4.bin",
-            "gemma3-1b-it-int4.task"
-        )
 
         // Keywords that always escalate to Opus
         private val ESCALATE_KEYWORDS = listOf(
@@ -56,31 +51,20 @@ class PhoneAgent(private val context: Context) {
         data class Escalate(val reason: String, val summary: String) : RouterResult()
     }
 
-    // MediaPipe LlmInference instance (typed loosely for graceful degradation)
-    private var llmInference: Any? = null
+    // AICore GenerativeModel instance (reflection-based for graceful degradation)
+    private var generativeModel: Any? = null
     private var initialized = false
     private var initFailed = false
 
     /**
      * Classify a query as simple (handle locally) or complex (escalate to Opus).
-     * Uses keyword matching first (fast, no inference needed).
      */
     fun classifyQuery(query: String): Boolean {
         val lower = query.lowercase().trim()
-
-        // Always escalate health/safety/tool queries
         if (ESCALATE_KEYWORDS.any { lower.contains(it) }) return false
-
-        // Simple patterns handled locally
         if (SIMPLE_PATTERNS.any { lower.contains(it) }) return true
-
-        // Short queries (< 8 words) that aren't flagged are likely simple
         if (lower.split(" ").size <= 8 && !lower.contains("?")) return true
-
-        // Questions are more likely to need Opus
         if (lower.contains("why") || lower.contains("how") || lower.endsWith("?")) return false
-
-        // Default: escalate to be safe
         return false
     }
 
@@ -96,7 +80,6 @@ class PhoneAgent(private val context: Context) {
             )
         }
 
-        // Try Gemma inference
         try {
             val response = runGemmaInference(prompt)
             if (response.isNullOrBlank()) {
@@ -116,58 +99,108 @@ class PhoneAgent(private val context: Context) {
     }
 
     /**
-     * Initialize MediaPipe LLM Inference with Gemma model.
-     * Call once on app start (background thread). Takes ~5-10s.
+     * Initialize Gemma 4 via AICore GenerativeModel.
+     * Prefers E2B (fastest) model. Falls back to MediaPipe if AICore unavailable.
      */
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         if (initialized) return@withContext true
         if (initFailed) return@withContext false
 
-        try {
-            val modelFile = findModelFile()
-            if (modelFile == null) {
-                Log.w(TAG, "Gemma model file not found. PhoneAgent will escalate all queries.")
-                Log.w(TAG, "Place a Gemma model file in one of: app files dir, external files dir, /sdcard/Download/")
-                initFailed = true
-                return@withContext false
+        // Try AICore GenerativeModel first
+        if (tryInitAiCore()) return@withContext true
+
+        // Fall back to MediaPipe LLM Inference (file-based)
+        if (tryInitMediaPipe()) return@withContext true
+
+        Log.w(TAG, "No Gemma runtime available. PhoneAgent will escalate all queries.")
+        initFailed = true
+        false
+    }
+
+    private fun tryInitAiCore(): Boolean {
+        return try {
+            // AICore GenerativeModel API
+            val genModelClass = Class.forName("com.google.ai.edge.aicore.GenerativeModel")
+            val configClass = Class.forName("com.google.ai.edge.aicore.GenerationConfig")
+            val modelConfigClass = Class.forName("com.google.ai.edge.aicore.ModelConfig")
+
+            // Build config preferring E2B (fast) model
+            val modelConfig = modelConfigClass.getConstructor().newInstance()
+            // Set preference to COMPACT (E2B = faster, lower memory)
+            try {
+                val prefEnum = Class.forName("com.google.ai.edge.aicore.ModelPreference")
+                val compact = prefEnum.getField("COMPACT").get(null)
+                modelConfigClass.getMethod("setPreference", prefEnum).invoke(modelConfig, compact)
+            } catch (_: Exception) {
+                // Default preference is fine
             }
 
-            // Use reflection for MediaPipe LLM Inference API
-            val optionsClass = Class.forName("com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions")
-            val builderClass = Class.forName("com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions\$Builder")
-            val llmClass = Class.forName("com.google.mediapipe.tasks.genai.llminference.LlmInference")
+            val config = configClass.getConstructor().newInstance()
+            configClass.getMethod("setModelConfig", modelConfigClass).invoke(config, modelConfig)
 
-            val builder = builderClass.getConstructor().newInstance()
-            builderClass.getMethod("setModelPath", String::class.java)
+            val model = genModelClass.getMethod("getClient", configClass).invoke(null, config)
+            generativeModel = model
+            initialized = true
+            Log.i(TAG, "Gemma 4 initialized via AICore GenerativeModel")
+            true
+        } catch (e: Exception) {
+            Log.d(TAG, "AICore not available: ${e.message}")
+            false
+        }
+    }
+
+    private fun tryInitMediaPipe(): Boolean {
+        return try {
+            val modelFile = findModelFile() ?: return false
+            val optionsBuilderClass = Class.forName(
+                "com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions\$Builder"
+            )
+            val optionsClass = Class.forName(
+                "com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions"
+            )
+            val llmClass = Class.forName(
+                "com.google.mediapipe.tasks.genai.llminference.LlmInference"
+            )
+
+            val builder = optionsBuilderClass.getConstructor().newInstance()
+            optionsBuilderClass.getMethod("setModelPath", String::class.java)
                 .invoke(builder, modelFile.absolutePath)
-            builderClass.getMethod("setMaxTokens", Int::class.javaPrimitiveType)
+            optionsBuilderClass.getMethod("setMaxTokens", Int::class.javaPrimitiveType)
                 .invoke(builder, 256)
-            val options = builderClass.getMethod("build").invoke(builder)
+            val options = optionsBuilderClass.getMethod("build").invoke(builder)
 
             val inference = llmClass.getMethod("createFromOptions", Context::class.java, optionsClass)
                 .invoke(null, context, options)
 
-            llmInference = inference
+            generativeModel = inference
             initialized = true
             Log.i(TAG, "Gemma initialized via MediaPipe from ${modelFile.absolutePath}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize Gemma: ${e.message}")
-            initFailed = true
+            Log.d(TAG, "MediaPipe not available: ${e.message}")
             false
         }
     }
 
     private suspend fun runGemmaInference(prompt: String): String? {
-        if (!initialized || llmInference == null) {
+        if (!initialized || generativeModel == null) {
             if (!initialize()) return null
         }
 
-        val inference = llmInference ?: return null
+        val model = generativeModel ?: return null
         return try {
-            val response = inference.javaClass
-                .getMethod("generateResponse", String::class.java)
-                .invoke(inference, prompt) as? String
+            // Try AICore generateContent first
+            val response = try {
+                val result = model.javaClass
+                    .getMethod("generateContent", String::class.java)
+                    .invoke(model, prompt)
+                result?.javaClass?.getMethod("getText")?.invoke(result) as? String
+            } catch (_: NoSuchMethodException) {
+                // Fall back to MediaPipe generateResponse
+                model.javaClass
+                    .getMethod("generateResponse", String::class.java)
+                    .invoke(model, prompt) as? String
+            }
             response?.trim()
         } catch (e: Exception) {
             Log.e(TAG, "Gemma inference call failed: ${e.message}")
@@ -175,17 +208,27 @@ class PhoneAgent(private val context: Context) {
         }
     }
 
-    private fun findModelFile(): File? {
-        val candidates = mutableListOf<File>()
-        MODEL_FILENAMES.forEach { filename ->
-            candidates += File(context.filesDir, filename)
-            candidates += File(context.getExternalFilesDir(null), filename)
-            candidates += File("/sdcard/Download/$filename")
-            candidates += File("/sdcard/Documents/$filename")
-            candidates += File("/sdcard/$filename")
+    private fun findModelFile(): java.io.File? {
+        val filenames = listOf(
+            "gemma-4-E2B-it.bin", "gemma-4-E4B-it.bin",
+            "gemma-4-e2b-it.bin", "gemma-4-e2b-it.task",
+            "gemma-2-2b-it-gpu-int4.bin", "gemma3-1b-it-int4.task"
+        )
+        val dirs = listOf(
+            context.filesDir,
+            context.getExternalFilesDir(null),
+            java.io.File("/sdcard/Download"),
+            java.io.File("/sdcard/Documents"),
+            java.io.File("/sdcard")
+        )
+        for (filename in filenames) {
+            for (dir in dirs) {
+                val f = java.io.File(dir, filename)
+                if (f.exists() && f.length() > 0) return f
+            }
         }
-        return candidates.firstOrNull { it.exists() && it.length() > 0 }
+        return null
     }
 
-    fun isAvailable(): Boolean = initialized && llmInference != null
+    fun isAvailable(): Boolean = initialized && generativeModel != null
 }
