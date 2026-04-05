@@ -67,4 +67,8 @@ dependencies {
     // Wearable API (phone ↔ watch messaging)
     implementation(libs.play.services.wearable)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // LiteRT-LM for on-device Gemma 4 E2B inference
+    // Using MediaPipe tasks-genai which is compatible with our Kotlin version
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 }

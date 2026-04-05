@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messageAdapter: RoomMessageAdapter
     private lateinit var roomLayoutManager: LinearLayoutManager
     private lateinit var watchRelay: WatchRelay
+    private lateinit var phoneAgent: PhoneAgent
     private var autoScrollEnabled = true
     private var activeTab: Tab = Tab.ROOMS
     private var activeRoomSlug: String = DEFAULT_ROOM
@@ -200,6 +201,10 @@ class MainActivity : AppCompatActivity() {
         binding.composerInput.inputType = InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
+
+        // On-device Gemma agent (tier-1 handler)
+        phoneAgent = PhoneAgent(this)
+        lifecycleScope.launch { phoneAgent.initialize() }
 
         // Watch relay for ClawWatch agent channel
         watchRelay = WatchRelay(this)
@@ -647,19 +652,55 @@ class MainActivity : AppCompatActivity() {
             updateAvatarState("THINKING", "NEUTRAL")
 
             lifecycleScope.launch {
-                val sent = watchRelay.sendQuery(message)
-                if (!sent) {
-                    roomMessages += LocalMessage(
-                        author = "ClawWatch",
-                        body = "Watch not connected. Make sure your ClawWatch is nearby and awake.",
-                        timestamp = nowTime(),
-                        isUser = false
-                    )
-                    setRoomLoadingState(loading = false, message = "Watch offline")
-                    updateAvatarState("IDLE", "NEUTRAL")
-                    renderRoomMessages(forceScroll = true)
+                // Tier-1: try PhoneAgent (Gemma) for simple queries
+                val routerResult = phoneAgent.query(message)
+
+                when (routerResult) {
+                    is PhoneAgent.RouterResult.Answer -> {
+                        // Gemma handled it locally -- zero Opus tokens
+                        roomMessages += LocalMessage(
+                            author = "ClawWatch (Gemma)",
+                            body = routerResult.text,
+                            timestamp = nowTime(),
+                            isUser = false
+                        )
+                        channelPreviewOverrides[target] = routerResult.text.take(96)
+                        setRoomLoadingState(loading = false, message = "Gemma (local)")
+                        updateAvatarState("IDLE", "CHEERFUL")
+                        renderRoomMessages(forceScroll = true)
+                    }
+
+                    is PhoneAgent.RouterResult.Escalate -> {
+                        // Complex query -- escalate to watch ClawRunner (Opus)
+                        setRoomLoadingState(loading = true, message = "Escalating to Opus...")
+                        val sent = watchRelay.sendQuery(message)
+                        if (!sent) {
+                            // Watch offline -- try Gemma as fallback even for complex queries
+                            setRoomLoadingState(loading = true, message = "Watch offline, trying Gemma...")
+                            val fallback = runGemmaFallback(message)
+                            if (fallback != null) {
+                                roomMessages += LocalMessage(
+                                    author = "ClawWatch (Gemma)",
+                                    body = fallback,
+                                    timestamp = nowTime(),
+                                    isUser = false
+                                )
+                                setRoomLoadingState(loading = false, message = "Gemma fallback")
+                            } else {
+                                roomMessages += LocalMessage(
+                                    author = "ClawWatch",
+                                    body = "Watch not connected and Gemma unavailable. Make sure your ClawWatch is nearby.",
+                                    timestamp = nowTime(),
+                                    isUser = false
+                                )
+                                setRoomLoadingState(loading = false, message = "Offline")
+                            }
+                            updateAvatarState("IDLE", "NEUTRAL")
+                            renderRoomMessages(forceScroll = true)
+                        }
+                        // If sent, response arrives via watchRelay listener
+                    }
                 }
-                // Response arrives via watchRelay listener
             }
             return
         }
@@ -1153,6 +1194,28 @@ class MainActivity : AppCompatActivity() {
     private fun isDeveloperError(message: String): Boolean {
         val normalized = message.lowercase(Locale.US)
         return normalized.contains("developer_error") || normalized.contains("code 10")
+    }
+
+    /**
+     * Last-resort Gemma fallback for when watch is offline.
+     * Bypasses the classifier and runs Gemma directly.
+     */
+    private suspend fun runGemmaFallback(prompt: String): String? {
+        if (!phoneAgent.isAvailable()) {
+            phoneAgent.initialize()
+        }
+        if (!phoneAgent.isAvailable()) return null
+        val result = phoneAgent.query(prompt)
+        return when (result) {
+            is PhoneAgent.RouterResult.Answer -> result.text
+            is PhoneAgent.RouterResult.Escalate -> {
+                // Even escalated queries get Gemma as last resort when offline
+                try {
+                    val directResult = phoneAgent.query("Please answer briefly: $prompt")
+                    (directResult as? PhoneAgent.RouterResult.Answer)?.text
+                } catch (_: Exception) { null }
+            }
+        }
     }
 
     private fun nowTime(): String = localTimeFormat.format(Date())
