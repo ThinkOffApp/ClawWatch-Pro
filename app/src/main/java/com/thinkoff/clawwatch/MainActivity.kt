@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
             "@CodexMB",
             "@claudemm"
         )
+        private const val CLAWWATCH_CHANNEL = "clawwatch"
     }
 
     private enum class Tab(
@@ -80,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     private val recentDirectChannels = linkedMapOf<String, ChannelItem>()
     private lateinit var messageAdapter: RoomMessageAdapter
     private lateinit var roomLayoutManager: LinearLayoutManager
+    private lateinit var watchRelay: WatchRelay
     private var autoScrollEnabled = true
     private var activeTab: Tab = Tab.ROOMS
     private var activeRoomSlug: String = DEFAULT_ROOM
@@ -127,7 +129,8 @@ class MainActivity : AppCompatActivity() {
 
     private enum class TargetKind {
         ROOM,
-        IDE
+        IDE,
+        WATCH
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -198,6 +201,27 @@ class MainActivity : AppCompatActivity() {
             InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
 
+        // Watch relay for ClawWatch agent channel
+        watchRelay = WatchRelay(this)
+        watchRelay.setResponseListener { response ->
+            runOnUiThread {
+                roomMessages += LocalMessage(
+                    author = "ClawWatch",
+                    body = response,
+                    timestamp = nowTime(),
+                    isUser = false
+                )
+                channelPreviewOverrides[CLAWWATCH_CHANNEL] = response.take(96)
+                renderRoomMessages(forceScroll = true)
+                setRoomLoadingState(loading = false, message = "Connected")
+            }
+        }
+        watchRelay.setAvatarStateListener { state, mood ->
+            runOnUiThread {
+                updateAvatarState(state, mood)
+            }
+        }
+
         loadSavedSettings()
         seedInitialMessages()
         renderRoomMessages(forceScroll = true)
@@ -210,7 +234,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        watchRelay.start()
         refreshRecentDirectChannels()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        watchRelay.stop()
     }
 
     private fun showTab(tab: Tab, animate: Boolean = true) {
@@ -370,7 +400,7 @@ class MainActivity : AppCompatActivity() {
             author = "ClawWatch",
             body = "Open Rooms to load your family room, then chat live.",
             timestamp = nowTime(),
-            isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+            isUser = false
         )
         binding.roomHint.text = "Connected room state and message timeline appear here."
         binding.roomStatus.text = "Choose a room target to begin"
@@ -394,7 +424,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "Sign in with Google in the Account tab before loading your room.",
                 timestamp = nowTime(),
-                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                isUser = false
             )
             binding.roomHint.text = "Google sign-in is required before the room can load."
             binding.roomStatus.text = "Owner setup needed"
@@ -411,7 +441,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "Set your nickname in the Account tab before loading the family room.",
                 timestamp = nowTime(),
-                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                isUser = false
             )
             binding.roomHint.text = "Finish nickname setup to continue as this room owner."
             binding.roomStatus.text = "Nickname needed"
@@ -428,7 +458,7 @@ class MainActivity : AppCompatActivity() {
                 author = "ClawWatch",
                 body = "The internal room transport is missing. Reload the app and try again.",
                 timestamp = nowTime(),
-                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                isUser = false
             )
             binding.roomHint.text = "The hidden room transport is not configured."
             binding.roomStatus.text = "Transport missing"
@@ -456,7 +486,7 @@ class MainActivity : AppCompatActivity() {
                     author = "ClawWatch",
                     body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
                     timestamp = nowTime(),
-                    isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                    isUser = false
                 )
                 binding.roomStatus.text = "Google reauth needed"
                 binding.roomPresenceChip.text = "Setup"
@@ -486,7 +516,7 @@ class MainActivity : AppCompatActivity() {
                                 author = it.from,
                                 body = it.body,
                                 timestamp = formatTimestamp(it.createdAt),
-                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                                isUser = false
                             )
                         }
                         if (roomMessages.isEmpty()) {
@@ -494,7 +524,7 @@ class MainActivity : AppCompatActivity() {
                                 author = "ClawWatch",
                                 body = "No messages yet in ${feed.roomSlug}. Send one to start the test.",
                                 timestamp = nowTime(),
-                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                                isUser = false
                             )
                         }
                         channelPreviewOverrides[feed.roomSlug] =
@@ -516,7 +546,7 @@ class MainActivity : AppCompatActivity() {
                                 author = it.from,
                                 body = it.body,
                                 timestamp = formatTimestamp(it.createdAt),
-                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                                isUser = false
                             )
                         }
                         if (roomMessages.isEmpty()) {
@@ -524,12 +554,13 @@ class MainActivity : AppCompatActivity() {
                                 author = "ClawWatch",
                                 body = "No direct messages yet with ${feed.target}. Send one to start the test.",
                                 timestamp = nowTime(),
-                                isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                                isUser = false
                             )
                         }
                         channelPreviewOverrides[feed.target] =
                             roomMessages.lastOrNull()?.body?.take(96) ?: "No messages yet."
                     }
+                TargetKind.WATCH -> Result.success(Unit) // Handled by WatchRelay
             }
 
             result
@@ -550,7 +581,7 @@ class MainActivity : AppCompatActivity() {
                         author = "ClawWatch",
                         body = "Room load failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
-                        isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                        isUser = false
                     )
                     binding.roomStatus.text = "Connection failed for $target"
                     binding.roomPresenceChip.text = "Error"
@@ -598,6 +629,41 @@ class MainActivity : AppCompatActivity() {
         val apiKey = getAntFarmKey()
         val target = activeRoomSlug.ifBlank { getConfiguredRoom() }
         val targetKind = classifyTarget(target)
+
+        // Watch channel bypasses room auth requirements
+        if (targetKind == TargetKind.WATCH) {
+            autoScrollEnabled = true
+            roomMessages += LocalMessage(
+                author = getCurrentNickname() ?: "You",
+                body = message,
+                timestamp = nowTime(),
+                isUser = true
+            )
+            channelPreviewOverrides[target] = message.take(96)
+            binding.composerInput.text?.clear()
+            updateRoomsUi()
+            renderRoomMessages(forceScroll = true)
+            setRoomLoadingState(loading = true, message = "Thinking...")
+            updateAvatarState("THINKING", "NEUTRAL")
+
+            lifecycleScope.launch {
+                val sent = watchRelay.sendQuery(message)
+                if (!sent) {
+                    roomMessages += LocalMessage(
+                        author = "ClawWatch",
+                        body = "Watch not connected. Make sure your ClawWatch is nearby and awake.",
+                        timestamp = nowTime(),
+                        isUser = false
+                    )
+                    setRoomLoadingState(loading = false, message = "Watch offline")
+                    updateAvatarState("IDLE", "NEUTRAL")
+                    renderRoomMessages(forceScroll = true)
+                }
+                // Response arrives via watchRelay listener
+            }
+            return
+        }
+
         if (!isHumanReady()) {
             roomMessages += LocalMessage(
                 "ClawWatch",
@@ -625,7 +691,7 @@ class MainActivity : AppCompatActivity() {
         binding.composerInput.text?.clear()
         updateRoomsUi()
         renderRoomMessages(forceScroll = true)
-        setRoomLoadingState(loading = true, message = "Sending…")
+        setRoomLoadingState(loading = true, message = "Sending...")
 
         lifecycleScope.launch {
             val googleIdToken = if (targetKind == TargetKind.IDE) {
@@ -639,7 +705,7 @@ class MainActivity : AppCompatActivity() {
                     author = "ClawWatch",
                     body = "Direct IDE messaging needs a fresh Google sign-in on this phone. Sign out and sign in again in Account.",
                     timestamp = nowTime(),
-                    isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                    isUser = false
                 )
                 setRoomLoadingState(loading = false, message = "Google reauth needed")
                 renderRoomMessages()
@@ -649,6 +715,7 @@ class MainActivity : AppCompatActivity() {
             val result = when (targetKind) {
                 TargetKind.ROOM -> antFarmClient.sendRoomMessage(target, apiKey, message)
                 TargetKind.IDE -> antFarmClient.sendDirectMessageAsHuman(target, googleIdToken!!, message)
+                TargetKind.WATCH -> return@launch // Handled by WatchRelay path above
             }
             result
                 .onSuccess { 
@@ -659,7 +726,7 @@ class MainActivity : AppCompatActivity() {
                         author = "ClawWatch",
                         body = "Send failed: ${error.message ?: "unknown error"}",
                         timestamp = nowTime(),
-                        isUser = (it.from == getCurrentNickname() || it.from == "petrus")
+                        isUser = false
                     )
                     setRoomLoadingState(loading = false, message = "Send failed")
                     renderRoomMessages()
@@ -755,6 +822,7 @@ class MainActivity : AppCompatActivity() {
             .ifEmpty { listOf(DEFAULT_ROOM) }
 
     private fun classifyTarget(target: String): TargetKind {
+        if (target == CLAWWATCH_CHANNEL) return TargetKind.WATCH
         val normalized = target.trim().removePrefix("@")
         return if (
             target.trim().startsWith("@") ||
@@ -771,9 +839,57 @@ class MainActivity : AppCompatActivity() {
         activeRoomName = roomName
         activeTargetKind = classifyTarget(roomSlug)
         applyHeader()
+        updateAvatarVisibility()
         channelPreviewOverrides[roomSlug] = channelPreviewOverrides[roomSlug] ?: "Opening conversation..."
         updateRoomsUi()
-        refreshActiveConversation(switchToRoom = true)
+
+        if (activeTargetKind == TargetKind.WATCH) {
+            // For ClawWatch channel, seed a welcome message if empty
+            if (roomMessages.isEmpty() || roomMessages.none { !it.isUser }) {
+                roomMessages.clear()
+                roomMessages += LocalMessage(
+                    author = "ClawWatch",
+                    body = "Hi! I'm your ClawWatch assistant. Ask me anything, or say \"how is my health\" to check your vitals.",
+                    timestamp = nowTime(),
+                    isUser = false
+                )
+                renderRoomMessages(forceScroll = true)
+            }
+            showTab(Tab.ROOM)
+        } else {
+            refreshActiveConversation(switchToRoom = true)
+        }
+    }
+
+    private fun updateAvatarVisibility() {
+        binding.avatarContainer.visibility =
+            if (activeTargetKind == TargetKind.WATCH) View.VISIBLE else View.GONE
+    }
+
+    private fun updateAvatarState(state: String, mood: String) {
+        // Update status text
+        binding.avatarStatusText.text = when (state) {
+            "THINKING" -> "Thinking..."
+            "SPEAKING" -> "Speaking..."
+            "LISTENING" -> "Listening..."
+            "ERROR" -> "Something went wrong"
+            else -> "Ready"
+        }
+
+        // Load appropriate AVD for current avatar + state
+        val avdName = when (state.lowercase()) {
+            "thinking" -> "avd_avatar_lobster_thinking"
+            "speaking" -> "avd_avatar_lobster_speaking"
+            "listening" -> "avd_avatar_lobster_listening"
+            else -> "avd_avatar_lobster_idle"
+        }
+        val resId = resources.getIdentifier(avdName, "drawable", packageName)
+        if (resId != 0) {
+            val avd = androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
+                .create(this, resId)
+            binding.avatarView.setImageDrawable(avd)
+            avd?.start()
+        }
     }
 
     private fun refreshRecentDirectChannels(updateUi: Boolean = true) {
@@ -832,6 +948,13 @@ class MainActivity : AppCompatActivity() {
         val configuredRoom = getConfiguredRoom()
         val items = linkedMapOf<String, ChannelItem>()
 
+        // ClawWatch agent channel always first
+        items[CLAWWATCH_CHANNEL] = ChannelItem(
+            slug = CLAWWATCH_CHANNEL,
+            title = "ClawWatch",
+            preview = channelPreviewFor(CLAWWATCH_CHANNEL)
+        )
+
         items[configuredRoom] = ChannelItem(
             slug = configuredRoom,
             title = "Family room",
@@ -886,6 +1009,7 @@ class MainActivity : AppCompatActivity() {
             roomMessages.lastOrNull()?.body?.takeIf { it.isNotBlank() }?.let { return it.take(96) }
         }
         return when (slug) {
+            CLAWWATCH_CHANNEL -> "Talk with your ClawWatch AI."
             getConfiguredRoom() -> "Your ClawWatch family conversation."
             IDE_ROOM_THINKOFF_DEVELOPMENT -> "IDE channel · team development."
             IDE_ROOM_ANT_FARM_MANAGEMENT -> "IDE channel · ops and management."
