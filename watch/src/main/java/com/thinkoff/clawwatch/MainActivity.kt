@@ -950,7 +950,8 @@ class MainActivity : AppCompatActivity() {
         return when (inferenceMode) {
             InferenceMode.GEMMA -> true
             InferenceMode.OPUS -> false
-            InferenceMode.AUTO -> phoneGemmaAvailable
+            // Auto defaults to Opus until phone confirms Gemma is loaded
+            InferenceMode.AUTO -> false
         }
     }
 
