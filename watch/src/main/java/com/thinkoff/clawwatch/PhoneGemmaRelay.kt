@@ -26,6 +26,8 @@ class PhoneGemmaRelay(private val context: Context) : MessageClient.OnMessageRec
         private const val TAG = "PhoneGemmaRelay"
         const val PATH_GEMMA_QUERY = "/clawwatch/gemma-query"
         const val PATH_GEMMA_RESPONSE = "/clawwatch/gemma-response"
+        const val PATH_HISTORY_REQUEST = "/clawwatch/history-request"
+        const val PATH_HISTORY_RESPONSE = "/clawwatch/history-response"
         private const val TIMEOUT_MS = 30_000L
     }
 

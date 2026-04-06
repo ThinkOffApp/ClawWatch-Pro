@@ -26,6 +26,8 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
         const val PATH_AVATAR_STATE = "/clawwatch/avatar-state"
         const val PATH_GEMMA_QUERY = "/clawwatch/gemma-query"
         const val PATH_GEMMA_RESPONSE = "/clawwatch/gemma-response"
+        const val PATH_HISTORY_REQUEST = "/clawwatch/history-request"
+        const val PATH_HISTORY_RESPONSE = "/clawwatch/history-response"
     }
 
     private val messageClient: MessageClient = Wearable.getMessageClient(context)
@@ -33,6 +35,7 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
 
     private var responseCallback: ((String) -> Unit)? = null
     private var avatarStateCallback: ((state: String, mood: String) -> Unit)? = null
+    private var historyCallback: ((List<Pair<String, String>>) -> Unit)? = null
     private var phoneAgent: PhoneAgent? = null
     private val gemmaScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
@@ -40,6 +43,24 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
 
     fun setPhoneAgent(agent: PhoneAgent) {
         phoneAgent = agent
+    }
+
+    fun setHistoryListener(callback: (List<Pair<String, String>>) -> Unit) {
+        historyCallback = callback
+    }
+
+    /**
+     * Request conversation history from the watch.
+     * Response arrives asynchronously via historyCallback.
+     */
+    suspend fun requestHistory() = withContext(Dispatchers.IO) {
+        val nodes = try { nodeClient.connectedNodes.await() } catch (_: Exception) { return@withContext }
+        for (node in nodes) {
+            try {
+                messageClient.sendMessage(node.id, PATH_HISTORY_REQUEST, ByteArray(0)).await()
+                break
+            } catch (_: Exception) { }
+        }
     }
 
     fun start() {
@@ -105,6 +126,20 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
                 val state = parts.getOrElse(0) { "IDLE" }
                 val mood = parts.getOrElse(1) { "NEUTRAL" }
                 avatarStateCallback?.invoke(state, mood)
+            }
+            PATH_HISTORY_RESPONSE -> {
+                // Watch sent conversation history
+                try {
+                    val jsonArray = org.json.JSONArray(data)
+                    val history = mutableListOf<Pair<String, String>>()
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        history += obj.getString("role") to obj.getString("content")
+                    }
+                    historyCallback?.invoke(history)
+                } catch (e: Exception) {
+                    android.util.Log.e("WatchRelay", "Failed to parse history: ${e.message}")
+                }
             }
             PATH_GEMMA_QUERY -> {
                 // Watch asked phone to run Gemma locally

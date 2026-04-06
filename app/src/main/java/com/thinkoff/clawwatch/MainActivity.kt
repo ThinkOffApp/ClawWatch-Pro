@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
     private var autoScrollEnabled = true
+    private val PREF_CLAWWATCH_HISTORY = "clawwatch_chat_history"
     private var activeTab: Tab = Tab.ROOMS
     private var activeRoomSlug: String = DEFAULT_ROOM
     private var activeRoomName: String = "Family room"
@@ -220,11 +221,34 @@ class MainActivity : AppCompatActivity() {
                 channelPreviewOverrides[CLAWWATCH_CHANNEL] = response.take(96)
                 renderRoomMessages(forceScroll = true)
                 setRoomLoadingState(loading = false, message = "Connected")
+                if (activeTargetKind == TargetKind.WATCH) saveClawWatchHistory()
             }
         }
         watchRelay.setAvatarStateListener { state, mood ->
             runOnUiThread {
                 updateAvatarState(state, mood)
+            }
+        }
+        watchRelay.setHistoryListener { history ->
+            runOnUiThread {
+                if (activeTargetKind == TargetKind.WATCH) {
+                    // Merge watch history into phone display
+                    val nickname = getCurrentNickname() ?: "You"
+                    val existing = roomMessages.toList()
+                    roomMessages.clear()
+                    history.forEach { (role, content) ->
+                        roomMessages += LocalMessage(
+                            author = if (role == "user") nickname else "ClawWatch",
+                            body = content,
+                            timestamp = "",
+                            isUser = role == "user"
+                        )
+                    }
+                    // Append any optimistic messages not yet in history
+                    existing.filter { it.isUser && roomMessages.none { h -> h.body == it.body } }
+                        .forEach { roomMessages += it }
+                    renderRoomMessages(forceScroll = true)
+                }
             }
         }
 
@@ -621,6 +645,7 @@ class MainActivity : AppCompatActivity() {
             )
             channelPreviewOverrides[target] = message.take(96)
             binding.composerInput.text?.clear()
+            saveClawWatchHistory()
             updateRoomsUi()
             renderRoomMessages(forceScroll = true)
             setRoomLoadingState(loading = true, message = "Thinking...")
@@ -824,17 +849,22 @@ class MainActivity : AppCompatActivity() {
         updateRoomsUi()
 
         if (activeTargetKind == TargetKind.WATCH) {
-            // For ClawWatch channel, seed a welcome message if empty
-            if (roomMessages.isEmpty() || roomMessages.none { !it.isUser }) {
-                roomMessages.clear()
+            // Load persisted chat history
+            val saved = loadClawWatchHistory()
+            roomMessages.clear()
+            if (saved.isNotEmpty()) {
+                roomMessages.addAll(saved)
+            } else {
                 roomMessages += LocalMessage(
                     author = "ClawWatch",
                     body = "Hi! I'm your ClawWatch assistant. Ask me anything, or say \"how is my health\" to check your vitals.",
                     timestamp = nowTime(),
                     isUser = false
                 )
-                renderRoomMessages(forceScroll = true)
             }
+            renderRoomMessages(forceScroll = true)
+            // Also request latest from watch to sync any new turns
+            lifecycleScope.launch { watchRelay.requestHistory() }
             showTab(Tab.ROOM)
         } else {
             refreshActiveConversation(switchToRoom = true)
@@ -1174,6 +1204,37 @@ class MainActivity : AppCompatActivity() {
                 } catch (_: Exception) { null }
             }
         }
+    }
+
+    private fun saveClawWatchHistory() {
+        try {
+            val json = org.json.JSONArray()
+            roomMessages.forEach { msg ->
+                json.put(org.json.JSONObject().apply {
+                    put("author", msg.author)
+                    put("body", msg.body)
+                    put("timestamp", msg.timestamp)
+                    put("isUser", msg.isUser)
+                })
+            }
+            prefs.edit().putString(PREF_CLAWWATCH_HISTORY, json.toString()).apply()
+        } catch (_: Exception) { }
+    }
+
+    private fun loadClawWatchHistory(): List<LocalMessage> {
+        val stored = prefs.getString(PREF_CLAWWATCH_HISTORY, null) ?: return emptyList()
+        return try {
+            val json = org.json.JSONArray(stored)
+            (0 until json.length()).map { i ->
+                val obj = json.getJSONObject(i)
+                LocalMessage(
+                    author = obj.getString("author"),
+                    body = obj.getString("body"),
+                    timestamp = obj.optString("timestamp", ""),
+                    isUser = obj.getBoolean("isUser")
+                )
+            }
+        } catch (_: Exception) { emptyList() }
     }
 
     private fun nowTime(): String = localTimeFormat.format(Date())

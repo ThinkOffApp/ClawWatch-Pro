@@ -26,11 +26,33 @@ class PhoneRelayService : WearableListenerService() {
         const val PATH_QUERY = "/clawwatch/query"
         const val PATH_RESPONSE = "/clawwatch/response"
         const val PATH_AVATAR_STATE = "/clawwatch/avatar-state"
+        const val PATH_HISTORY_REQUEST = "/clawwatch/history-request"
+        const val PATH_HISTORY_RESPONSE = "/clawwatch/history-response"
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(event: MessageEvent) {
+        if (event.path == PATH_HISTORY_REQUEST) {
+            // Phone is requesting conversation history
+            val sourceNodeId = event.sourceNodeId
+            serviceScope.launch {
+                val runner = ClawRunner(applicationContext)
+                val history = runner.getConversationHistory()
+                // Format as JSON array: [{"role":"user","content":"..."},...]
+                val json = org.json.JSONArray()
+                history.forEach { (role, content) ->
+                    json.put(org.json.JSONObject().apply {
+                        put("role", role)
+                        put("content", content)
+                    })
+                }
+                val payload = json.toString().toByteArray(Charsets.UTF_8)
+                Wearable.getMessageClient(applicationContext)
+                    .sendMessage(sourceNodeId, PATH_HISTORY_RESPONSE, payload)
+            }
+            return
+        }
         if (event.path != PATH_QUERY) return
 
         val queryText = String(event.data, Charsets.UTF_8)

@@ -85,6 +85,16 @@ class ClawRunner(private val context: Context) {
     private val prefs by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { SecurePrefs.watch(context) }
     private val conversationLock = Any()
     private val conversation = ArrayDeque<ChatTurn>()
+
+    /**
+     * Returns the current conversation history as a list of (role, content) pairs.
+     * Used by PhoneRelayService to sync history to the phone companion.
+     */
+    fun getConversationHistory(): List<Pair<String, String>> {
+        synchronized(conversationLock) {
+            return conversation.map { it.role to it.content }
+        }
+    }
     @Volatile
     private var conversationConfigFingerprint: String? = null
 
