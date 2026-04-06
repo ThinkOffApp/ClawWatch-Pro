@@ -847,28 +847,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAvatarState(state: String, mood: String) {
-        // Update status text
-        binding.avatarStatusText.text = when (state) {
-            "THINKING" -> "Thinking..."
-            "SPEAKING" -> "Speaking..."
-            "LISTENING" -> "Listening..."
-            "ERROR" -> "Something went wrong"
-            else -> "Ready"
-        }
+        try {
+            if (binding.avatarContainer.visibility != View.VISIBLE) return
 
-        // Load appropriate AVD for current avatar + state
-        val avdName = when (state.lowercase()) {
-            "thinking" -> "avd_avatar_lobster_thinking"
-            "speaking" -> "avd_avatar_lobster_speaking"
-            "listening" -> "avd_avatar_lobster_listening"
-            else -> "avd_avatar_lobster_idle"
-        }
-        val resId = resources.getIdentifier(avdName, "drawable", packageName)
-        if (resId != 0) {
-            val avd = androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
-                .create(this, resId)
-            binding.avatarView.setImageDrawable(avd)
-            avd?.start()
+            binding.avatarStatusText.text = when (state) {
+                "THINKING" -> "Thinking..."
+                "SPEAKING" -> "Speaking..."
+                "LISTENING" -> "Listening..."
+                "ERROR" -> "Something went wrong"
+                else -> "Ready"
+            }
+
+            val avdName = when (state.lowercase()) {
+                "thinking" -> "avd_avatar_lobster_thinking"
+                "speaking" -> "avd_avatar_lobster_speaking"
+                "listening" -> "avd_avatar_lobster_listening"
+                else -> "avd_avatar_lobster_idle"
+            }
+            val resId = resources.getIdentifier(avdName, "drawable", packageName)
+            if (resId != 0) {
+                val avd = androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
+                    .create(this, resId)
+                binding.avatarView.setImageDrawable(avd)
+                avd?.start()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ClawWatch", "Avatar state update failed: ${e.message}")
         }
     }
 
