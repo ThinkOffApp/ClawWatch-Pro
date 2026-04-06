@@ -6,6 +6,9 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.NodeClient
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -21,6 +24,8 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
         const val PATH_QUERY = "/clawwatch/query"
         const val PATH_RESPONSE = "/clawwatch/response"
         const val PATH_AVATAR_STATE = "/clawwatch/avatar-state"
+        const val PATH_GEMMA_QUERY = "/clawwatch/gemma-query"
+        const val PATH_GEMMA_RESPONSE = "/clawwatch/gemma-response"
     }
 
     private val messageClient: MessageClient = Wearable.getMessageClient(context)
@@ -28,6 +33,14 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
 
     private var responseCallback: ((String) -> Unit)? = null
     private var avatarStateCallback: ((state: String, mood: String) -> Unit)? = null
+    private var phoneAgent: PhoneAgent? = null
+    private val gemmaScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
+
+    fun setPhoneAgent(agent: PhoneAgent) {
+        phoneAgent = agent
+    }
 
     fun start() {
         messageClient.addListener(this)
@@ -92,6 +105,31 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
                 val state = parts.getOrElse(0) { "IDLE" }
                 val mood = parts.getOrElse(1) { "NEUTRAL" }
                 avatarStateCallback?.invoke(state, mood)
+            }
+            PATH_GEMMA_QUERY -> {
+                // Watch asked phone to run Gemma locally
+                val sourceNodeId = event.sourceNodeId
+                gemmaScope.launch {
+                    val agent = phoneAgent
+                    if (agent == null || !agent.isAvailable()) {
+                        agent?.initialize()
+                    }
+                    val response = try {
+                        val result = agent?.query(data)
+                        when (result) {
+                            is PhoneAgent.RouterResult.Answer -> result.text
+                            is PhoneAgent.RouterResult.Escalate -> {
+                                // Force Gemma to answer anyway (watch explicitly asked for Gemma)
+                                "I'm not sure about that. Try asking with Opus mode for a better answer."
+                            }
+                            null -> "Gemma not available on this phone."
+                        }
+                    } catch (e: Exception) {
+                        "Gemma error: ${e.message}"
+                    }
+                    val payload = response.toByteArray(Charsets.UTF_8)
+                    messageClient.sendMessage(sourceNodeId, PATH_GEMMA_RESPONSE, payload)
+                }
             }
         }
     }

@@ -208,6 +208,7 @@ class MainActivity : AppCompatActivity() {
 
         // Watch relay for ClawWatch agent channel
         watchRelay = WatchRelay(this)
+        watchRelay.setPhoneAgent(phoneAgent)
         watchRelay.setResponseListener { response ->
             runOnUiThread {
                 roomMessages += LocalMessage(

@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private enum class AvatarType { ANT, LOBSTER, ORANGE_LOBSTER, ROBOT, BOY, GIRL }
     private enum class AvatarState { IDLE, LISTENING, THINKING, SEARCHING, SPEAKING, ERROR }
     private enum class LocalCommandType { VITALS_SNAPSHOT, HEART_RATE, FAMILY_STATUS }
+    enum class InferenceMode { OPUS, GEMMA, AUTO }
     private data class TimerCommand(
         val totalSeconds: Int,
         val spokenDuration: String
@@ -97,6 +98,10 @@ class MainActivity : AppCompatActivity() {
     private var currentAvatarIndex = 0
     private var useEmojiFallback = false
     private var fallbackTextView: TextView? = null
+
+    private lateinit var phoneGemmaRelay: PhoneGemmaRelay
+    private var inferenceMode = InferenceMode.AUTO
+    private var phoneGemmaAvailable = false
 
     private var state = State.SETUP
     private var queryJob: Job? = null
@@ -205,6 +210,21 @@ class MainActivity : AppCompatActivity() {
         dayPhaseManager = DayPhaseManager(this)
         vitalsReader = VitalsReader(this)
         watchPushRegistrar = WatchPushRegistrar(this)
+        phoneGemmaRelay = PhoneGemmaRelay(this)
+        phoneGemmaRelay.start()
+
+        // Load saved inference mode
+        inferenceMode = when (prefs.getString("inference_mode", "auto")) {
+            "opus" -> InferenceMode.OPUS
+            "gemma" -> InferenceMode.GEMMA
+            else -> InferenceMode.AUTO
+        }
+
+        // Check if phone Gemma is reachable at startup
+        lifecycleScope.launch {
+            phoneGemmaAvailable = phoneGemmaRelay.isPhoneReachable()
+            Log.i(TAG, "Phone Gemma reachable: $phoneGemmaAvailable")
+        }
         
         val prefs = getSharedPreferences("claw_prefs", 0)
         currentAvatarIndex = prefs.getInt("avatar_idx", 0)
@@ -223,6 +243,10 @@ class MainActivity : AppCompatActivity() {
         })
 
         binding.fab.setOnClickListener { onFabTapped() }
+        binding.fab.setOnLongClickListener {
+            showInferenceModeSelector()
+            true
+        }
         binding.saveKeyBtn.setOnClickListener { onSaveKey() }
         setupAvatarSwipeSwitch()
         applyDayPhaseAppearance(dayPhaseManager.snapshotNow())
@@ -850,17 +874,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun askClaw(prompt: String, token: Int) {
         val searchLikely = shouldShowSearching(prompt)
+        val useGemma = shouldUseGemma()
         setState(if (searchLikely) State.SEARCHING else State.THINKING)
-        setStatus(if (searchLikely) "Searching…" else "Thinking…")
+        setStatus(when {
+            useGemma -> "Gemma thinking…"
+            searchLikely -> "Searching…"
+            else -> "Thinking…"
+        })
 
         queryJob = lifecycleScope.launch {
-            val result = clawRunner.query(prompt)
+            val startMs = SystemClock.elapsedRealtime()
+            val result = if (useGemma) {
+                phoneGemmaRelay.query(prompt)
+            } else {
+                clawRunner.query(prompt)
+            }
+            val elapsedMs = SystemClock.elapsedRealtime() - startMs
             if (token != interactionToken) return@launch
             result.fold(
                 onSuccess = { response ->
                     if (token != interactionToken) return@fold
+                    val modeLabel = if (useGemma) "Gemma" else "Opus"
+                    val responseWithTiming = "$response\n[${modeLabel} ${elapsedMs}ms]"
                     val plan = buildSpeechRenderPlan(response)
-                    binding.responseText.text = response
+                    binding.responseText.text = responseWithTiming
                     setState(State.SPEAKING)
                     startSpeakingPreview(plan.previewText)
                     gestureAnimator.animateSpeech(
@@ -900,6 +937,44 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         }
+    }
+
+    private fun shouldUseGemma(): Boolean {
+        return when (inferenceMode) {
+            InferenceMode.GEMMA -> true
+            InferenceMode.OPUS -> false
+            InferenceMode.AUTO -> phoneGemmaAvailable
+        }
+    }
+
+    private fun showInferenceModeSelector() {
+        val modes = arrayOf(
+            "Auto (Gemma when available)",
+            "Opus only (cloud)",
+            "Gemma only (local phone)"
+        )
+        val currentIdx = when (inferenceMode) {
+            InferenceMode.AUTO -> 0
+            InferenceMode.OPUS -> 1
+            InferenceMode.GEMMA -> 2
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Inference Mode")
+            .setSingleChoiceItems(modes, currentIdx) { dialog, which ->
+                inferenceMode = when (which) {
+                    1 -> InferenceMode.OPUS
+                    2 -> InferenceMode.GEMMA
+                    else -> InferenceMode.AUTO
+                }
+                val modeStr = when (inferenceMode) {
+                    InferenceMode.OPUS -> "opus"
+                    InferenceMode.GEMMA -> "gemma"
+                    InferenceMode.AUTO -> "auto"
+                }
+                prefs.edit().putString("inference_mode", modeStr).apply()
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun shouldShowSearching(prompt: String): Boolean {
@@ -1437,5 +1512,6 @@ class MainActivity : AppCompatActivity() {
         stopSpeakingPreview()
         queryJob?.cancel()
         voiceEngine.release()
+        phoneGemmaRelay.stop()
     }
 }
