@@ -74,21 +74,43 @@ class PhoneAgent(private val context: Context) {
         val eng = engine ?: return@withContext RouterResult.Escalate("engine_null", "Engine not ready")
 
         try {
-            eng.createConversation().use { conversation ->
-                val response = StringBuilder()
-                conversation.sendMessageAsync(prompt).collect { chunk ->
-                    response.append(chunk)
-                }
-                val text = response.toString().trim()
-                if (text.isBlank()) {
-                    RouterResult.Escalate("empty_response", prompt.take(80))
-                } else {
-                    RouterResult.Answer(text)
-                }
-            }
+            runInference(eng, prompt)
         } catch (e: Exception) {
             Log.e(TAG, "Gemma inference failed: ${e.message}", e)
-            RouterResult.Escalate("inference_error", e.message?.take(80) ?: "unknown")
+            // GPU init can succeed but inference fails (e.g. missing OpenCL)
+            // Retry with CPU backend
+            if (e.message?.contains("OpenCL") == true || e.message?.contains("GPU") == true) {
+                Log.i(TAG, "Retrying with CPU backend...")
+                val model = findModelFile() ?: return@withContext RouterResult.Escalate("no_model", "Model gone")
+                try {
+                    val cpuConfig = EngineConfig(modelPath = model.absolutePath, backend = Backend.CPU())
+                    val cpuEng = Engine(cpuConfig)
+                    cpuEng.initialize()
+                    engine = cpuEng
+                    Log.i(TAG, "Reinitialized with CPU backend")
+                    runInference(cpuEng, prompt)
+                } catch (e2: Exception) {
+                    Log.e(TAG, "CPU fallback also failed: ${e2.message}", e2)
+                    RouterResult.Escalate("inference_error", e2.message?.take(80) ?: "unknown")
+                }
+            } else {
+                RouterResult.Escalate("inference_error", e.message?.take(80) ?: "unknown")
+            }
+        }
+    }
+
+    private suspend fun runInference(eng: Engine, prompt: String): RouterResult {
+        eng.createConversation().use { conversation ->
+            val response = StringBuilder()
+            conversation.sendMessageAsync(prompt).collect { chunk ->
+                response.append(chunk)
+            }
+            val text = response.toString().trim()
+            return if (text.isBlank()) {
+                RouterResult.Escalate("empty_response", prompt.take(80))
+            } else {
+                RouterResult.Answer(text)
+            }
         }
     }
 
