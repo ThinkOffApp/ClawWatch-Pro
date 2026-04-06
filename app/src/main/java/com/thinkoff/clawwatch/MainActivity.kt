@@ -425,38 +425,10 @@ class MainActivity : AppCompatActivity() {
         val target = activeRoomSlug.ifBlank { getConfiguredRoom() }
         val targetKind = classifyTarget(target)
 
+        // Skip owner gates for read-only browsing. Sign-in only needed for sending.
         if (!isSignedInWithGoogle()) {
-            activeRoomName = "Family room"
-            roomMessages.clear()
-            roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "Sign in with Google in the Account tab before loading your room.",
-                timestamp = nowTime(),
-                isUser = false
-            )
-            binding.roomHint.text = "Google sign-in is required before the room can load."
-            binding.roomStatus.text = "Owner setup needed"
-            binding.roomPresenceChip.text = "Setup"
-            applyHeader()
-            renderRoomMessages(forceScroll = true)
-            return
-        }
-
-        if (!hasNickname()) {
-            activeRoomName = "Family room"
-            roomMessages.clear()
-            roomMessages += LocalMessage(
-                author = "ClawWatch",
-                body = "Set your nickname in the Account tab before loading the family room.",
-                timestamp = nowTime(),
-                isUser = false
-            )
-            binding.roomHint.text = "Finish nickname setup to continue as this room owner."
-            binding.roomStatus.text = "Nickname needed"
-            binding.roomPresenceChip.text = "Setup"
-            applyHeader()
-            renderRoomMessages(forceScroll = true)
-            return
+            binding.roomHint.text = "Sign in via Account to send messages."
+            binding.roomPresenceChip.text = "Read only"
         }
 
         if (apiKey.isNullOrBlank()) {
