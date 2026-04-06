@@ -208,15 +208,23 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             binding.gemmaStatusText.text = "Initializing Gemma..."
             binding.gemmaModelInfo.text = ""
+            binding.gemmaStatusChip.text = "Gemma loading..."
             val success = phoneAgent.initialize()
             if (success) {
                 binding.gemmaStatusText.text = "Gemma 4 E2B loaded and ready to respond"
                 binding.gemmaModelInfo.text = phoneAgent.getModelInfo()
-                binding.gemmaStatusText.setTextColor(0xFF4ADE80.toInt()) // green
+                binding.gemmaStatusText.setTextColor(0xFF4ADE80.toInt())
+                // Channel list chip
+                binding.gemmaStatusChip.text = "Gemma 4 E2B ready"
+                binding.gemmaStatusChip.setTextColor(0xFF4ADE80.toInt())
+                binding.gemmaStatusDot.setBackgroundColor(0xFF4ADE80.toInt())
             } else {
                 binding.gemmaStatusText.text = "Gemma not available. Download Gemma 4 E2B in Google AI Edge Gallery, then restart."
                 binding.gemmaModelInfo.text = "Model not found"
-                binding.gemmaStatusText.setTextColor(0xFFEF4444.toInt()) // red
+                binding.gemmaStatusText.setTextColor(0xFFEF4444.toInt())
+                binding.gemmaStatusChip.text = "Gemma offline"
+                binding.gemmaStatusChip.setTextColor(0xFF9CA3AF.toInt())
+                binding.gemmaStatusDot.setBackgroundColor(0xFFEF4444.toInt())
             }
         }
 
@@ -234,6 +242,7 @@ class MainActivity : AppCompatActivity() {
                 channelPreviewOverrides[CLAWWATCH_CHANNEL] = response.take(96)
                 renderRoomMessages(forceScroll = true)
                 setRoomLoadingState(loading = false, message = "Connected")
+                setGemmaActivity("idle")
                 if (activeTargetKind == TargetKind.WATCH) saveClawWatchHistory()
             }
         }
@@ -663,6 +672,7 @@ class MainActivity : AppCompatActivity() {
             renderRoomMessages(forceScroll = true)
             setRoomLoadingState(loading = true, message = "Thinking...")
             updateAvatarState("THINKING", "NEUTRAL")
+            setGemmaActivity("thinking")
 
             lifecycleScope.launch {
                 // Always send to watch first -- watch is the brain, holds conversation context.
@@ -690,6 +700,7 @@ class MainActivity : AppCompatActivity() {
                         setRoomLoadingState(loading = false, message = "Offline")
                     }
                     updateAvatarState("IDLE", "NEUTRAL")
+                    setGemmaActivity("idle")
                     renderRoomMessages(forceScroll = true)
                 }
                 // If sent, response arrives via watchRelay listener
@@ -1248,6 +1259,44 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         } catch (_: Exception) { emptyList() }
+    }
+
+    private var gemmaActivityAnimator: android.animation.ValueAnimator? = null
+
+    private fun setGemmaActivity(state: String) {
+        gemmaActivityAnimator?.cancel()
+        when (state) {
+            "thinking" -> {
+                binding.gemmaStatusChip.text = "Gemma thinking..."
+                binding.gemmaStatusChip.setTextColor(0xFFFFB020.toInt()) // amber
+                binding.gemmaStatusDot.setBackgroundColor(0xFFFFB020.toInt())
+                // Pulse animation on the dot
+                gemmaActivityAnimator = android.animation.ValueAnimator.ofFloat(0.3f, 1.0f).apply {
+                    duration = 600L
+                    repeatCount = android.animation.ValueAnimator.INFINITE
+                    repeatMode = android.animation.ValueAnimator.REVERSE
+                    addUpdateListener { binding.gemmaStatusDot.alpha = it.animatedValue as Float }
+                    start()
+                }
+            }
+            "streaming" -> {
+                binding.gemmaStatusChip.text = "Gemma responding..."
+                binding.gemmaStatusChip.setTextColor(0xFF60A5FA.toInt())
+                binding.gemmaStatusDot.setBackgroundColor(0xFF60A5FA.toInt())
+            }
+            else -> {
+                if (phoneAgent.isAvailable()) {
+                    binding.gemmaStatusChip.text = "Gemma 4 E2B ready"
+                    binding.gemmaStatusChip.setTextColor(0xFF4ADE80.toInt())
+                    binding.gemmaStatusDot.setBackgroundColor(0xFF4ADE80.toInt())
+                } else {
+                    binding.gemmaStatusChip.text = "Gemma offline"
+                    binding.gemmaStatusChip.setTextColor(0xFF9CA3AF.toInt())
+                    binding.gemmaStatusDot.setBackgroundColor(0xFFEF4444.toInt())
+                }
+                binding.gemmaStatusDot.alpha = 1.0f
+            }
+        }
     }
 
     private fun nowTime(): String = localTimeFormat.format(Date())
