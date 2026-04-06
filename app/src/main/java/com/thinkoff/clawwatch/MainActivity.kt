@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
     private var autoScrollEnabled = true
-    private var activeTab: Tab = Tab.ROOMS
+    private var activeTab: Tab = Tab.ROOM
     private var activeRoomSlug: String = DEFAULT_ROOM
     private var activeRoomName: String = "Family room"
     private var activeTargetKind: TargetKind = TargetKind.ROOM
@@ -175,18 +175,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.sendButton.setOnClickListener { sendComposerMessage() }
-        binding.sendWhatsAppButton.setOnClickListener {
-            handoffComposerMessage(
-                packageName = "com.whatsapp",
-                appLabel = "WhatsApp"
-            )
-        }
-        binding.sendTelegramButton.setOnClickListener {
-            handoffComposerMessage(
-                packageName = "org.telegram.messenger",
-                appLabel = "Telegram"
-            )
-        }
         binding.refreshRoomButton.setOnClickListener { refreshActiveConversation() }
         binding.saveWatchSettingsButton.setOnClickListener { saveWatchSettings() }
         binding.googleSignInButton.setOnClickListener {
@@ -230,7 +218,7 @@ class MainActivity : AppCompatActivity() {
         loadSavedSettings()
         seedInitialMessages()
         renderRoomMessages(forceScroll = true)
-        showTab(Tab.ROOMS, animate = false)
+        showTab(Tab.ROOM, animate = false)
 
         if (hasRoomConfig()) {
             refreshAntFarmRoom()
@@ -607,29 +595,6 @@ class MainActivity : AppCompatActivity() {
         sendAntFarmMessage(message)
     }
 
-    private fun handoffComposerMessage(
-        packageName: String,
-        appLabel: String
-    ) {
-        val message = binding.composerInput.text?.toString()?.trim().orEmpty()
-        if (message.isEmpty()) {
-            Toast.makeText(this, "Write a message first", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            setPackage(packageName)
-            putExtra(Intent.EXTRA_TEXT, message)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, "$appLabel is not installed", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun sendAntFarmMessage(message: String) {
         val apiKey = getAntFarmKey()
         val target = activeRoomSlug.ifBlank { getConfiguredRoom() }
@@ -817,8 +782,6 @@ class MainActivity : AppCompatActivity() {
     private fun setRoomLoadingState(loading: Boolean, message: String) {
         binding.refreshRoomButton.isEnabled = !loading
         binding.sendButton.isEnabled = !loading && isHumanReady()
-        binding.sendWhatsAppButton.isEnabled = !loading
-        binding.sendTelegramButton.isEnabled = !loading
         binding.loadRoomNowButton.isEnabled = !loading
         binding.roomStatus.text = message
         if (loading) {
