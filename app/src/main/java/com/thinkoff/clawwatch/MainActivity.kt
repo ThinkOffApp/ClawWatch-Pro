@@ -414,6 +414,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshActiveConversation(switchToRoom: Boolean = false) {
         if (switchToRoom) showTab(Tab.ROOM)
+        // ClawWatch channel uses direct Bluetooth relay, not Ant Farm rooms
+        if (classifyTarget(activeRoomSlug) == TargetKind.WATCH) return
         refreshAntFarmRoom()
     }
 
