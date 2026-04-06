@@ -213,12 +213,9 @@ class MainActivity : AppCompatActivity() {
         phoneGemmaRelay = PhoneGemmaRelay(this)
         phoneGemmaRelay.start()
 
-        // Load saved inference mode
-        inferenceMode = when (prefs.getString("inference_mode", "auto")) {
-            "opus" -> InferenceMode.OPUS
-            "gemma" -> InferenceMode.GEMMA
-            else -> InferenceMode.AUTO
-        }
+        // Default to Opus until Gemma is confirmed working on phone
+        inferenceMode = InferenceMode.OPUS
+        prefs.edit().putString("inference_mode", "opus").apply()
 
         // Check if phone Gemma is reachable at startup
         lifecycleScope.launch {

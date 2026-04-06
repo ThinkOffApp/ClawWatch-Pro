@@ -29,6 +29,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
     }
 
     buildFeatures {
@@ -68,7 +69,6 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
-    // LiteRT-LM for on-device Gemma 4 E2B inference
-    // Using MediaPipe tasks-genai which is compatible with our Kotlin version
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    // LiteRT-LM for on-device Gemma 4 E2B/E4B inference (GPU accelerated)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.0")
 }
