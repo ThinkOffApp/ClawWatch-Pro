@@ -654,55 +654,34 @@ class MainActivity : AppCompatActivity() {
             updateAvatarState("THINKING", "NEUTRAL")
 
             lifecycleScope.launch {
-                // Tier-1: try PhoneAgent (Gemma) for simple queries
-                val routerResult = phoneAgent.query(message)
-
-                when (routerResult) {
-                    is PhoneAgent.RouterResult.Answer -> {
-                        // Gemma handled it locally -- zero Opus tokens
+                // Always send to watch first -- watch is the brain, holds conversation context.
+                // Gemma is ONLY the offline fallback, never a split-brain answerer.
+                val sent = watchRelay.sendQuery(message)
+                if (!sent) {
+                    // Watch offline -- Gemma fallback (clearly labeled)
+                    setRoomLoadingState(loading = true, message = "Watch offline, trying local...")
+                    val fallback = runGemmaFallback(message)
+                    if (fallback != null) {
                         roomMessages += LocalMessage(
-                            author = "ClawWatch (Gemma)",
-                            body = routerResult.text,
+                            author = "ClawWatch (offline)",
+                            body = fallback,
                             timestamp = nowTime(),
                             isUser = false
                         )
-                        channelPreviewOverrides[target] = routerResult.text.take(96)
-                        setRoomLoadingState(loading = false, message = "Gemma (local)")
-                        updateAvatarState("IDLE", "CHEERFUL")
-                        renderRoomMessages(forceScroll = true)
+                        setRoomLoadingState(loading = false, message = "Offline mode")
+                    } else {
+                        roomMessages += LocalMessage(
+                            author = "ClawWatch",
+                            body = "Watch not connected. Make sure your ClawWatch is nearby and awake.",
+                            timestamp = nowTime(),
+                            isUser = false
+                        )
+                        setRoomLoadingState(loading = false, message = "Offline")
                     }
-
-                    is PhoneAgent.RouterResult.Escalate -> {
-                        // Complex query -- escalate to watch ClawRunner (Opus)
-                        setRoomLoadingState(loading = true, message = "Escalating to Opus...")
-                        val sent = watchRelay.sendQuery(message)
-                        if (!sent) {
-                            // Watch offline -- try Gemma as fallback even for complex queries
-                            setRoomLoadingState(loading = true, message = "Watch offline, trying Gemma...")
-                            val fallback = runGemmaFallback(message)
-                            if (fallback != null) {
-                                roomMessages += LocalMessage(
-                                    author = "ClawWatch (Gemma)",
-                                    body = fallback,
-                                    timestamp = nowTime(),
-                                    isUser = false
-                                )
-                                setRoomLoadingState(loading = false, message = "Gemma fallback")
-                            } else {
-                                roomMessages += LocalMessage(
-                                    author = "ClawWatch",
-                                    body = "Watch not connected and Gemma unavailable. Make sure your ClawWatch is nearby.",
-                                    timestamp = nowTime(),
-                                    isUser = false
-                                )
-                                setRoomLoadingState(loading = false, message = "Offline")
-                            }
-                            updateAvatarState("IDLE", "NEUTRAL")
-                            renderRoomMessages(forceScroll = true)
-                        }
-                        // If sent, response arrives via watchRelay listener
-                    }
+                    updateAvatarState("IDLE", "NEUTRAL")
+                    renderRoomMessages(forceScroll = true)
                 }
+                // If sent, response arrives via watchRelay listener
             }
             return
         }
