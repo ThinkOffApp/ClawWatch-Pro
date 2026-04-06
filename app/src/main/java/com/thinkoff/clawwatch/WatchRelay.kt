@@ -142,7 +142,7 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
                 }
             }
             PATH_GEMMA_QUERY -> {
-                // Watch asked phone to run Gemma locally
+                // Watch explicitly asked for Gemma -- run inference directly
                 val sourceNodeId = event.sourceNodeId
                 gemmaScope.launch {
                     val agent = phoneAgent
@@ -150,14 +150,17 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
                         agent?.initialize()
                     }
                     val response = try {
-                        val result = agent?.query(data)
-                        when (result) {
-                            is PhoneAgent.RouterResult.Answer -> result.text
-                            is PhoneAgent.RouterResult.Escalate -> {
-                                // Force Gemma to answer anyway (watch explicitly asked for Gemma)
-                                "I'm not sure about that. Try asking with Opus mode for a better answer."
+                        if (agent == null || !agent.isAvailable()) {
+                            "Gemma not available. Download Gemma 4 E2B in Google AI Edge Gallery."
+                        } else {
+                            val result = agent.query(data)
+                            when (result) {
+                                is PhoneAgent.RouterResult.Answer -> result.text
+                                is PhoneAgent.RouterResult.Escalate -> {
+                                    // Gemma failed to produce an answer
+                                    "Gemma could not answer: ${result.reason}"
+                                }
                             }
-                            null -> "Gemma not available on this phone."
                         }
                     } catch (e: Exception) {
                         "Gemma error: ${e.message}"
