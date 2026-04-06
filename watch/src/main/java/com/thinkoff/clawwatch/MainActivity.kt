@@ -242,8 +242,15 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        binding.fab.isLongClickable = true
         binding.fab.setOnClickListener { onFabTapped() }
         binding.fab.setOnLongClickListener {
+            showInferenceModeSelector()
+            true
+        }
+        // Also trigger mode selector on avatar long press (bigger target)
+        binding.avatarView.isLongClickable = true
+        binding.avatarView.setOnLongClickListener {
             showInferenceModeSelector()
             true
         }
@@ -1068,28 +1075,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showOptionsMenu() {
+        val modeLabel = when (inferenceMode) {
+            InferenceMode.AUTO -> "Auto"
+            InferenceMode.OPUS -> "Opus"
+            InferenceMode.GEMMA -> "Gemma"
+        }
         val options = arrayOf(
-            "Live text",
-            "Thought / speech bubbles"
-        )
-        val checked = booleanArrayOf(
-            isLiveTextEnabled(),
-            areStatusBubblesEnabled()
+            "Voice without text",
+            "Thought / speech bubbles",
+            "Inference: $modeLabel"
         )
         AlertDialog.Builder(this)
             .setTitle("Options")
-            .setMultiChoiceItems(options, checked) { _, which, isChecked ->
-                checked[which] = isChecked
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        // Toggle live text (voice without text = live text OFF)
+                        val newValue = !isLiveTextEnabled()
+                        prefs.edit().putBoolean(PREF_LIVE_TEXT_ENABLED, newValue).apply()
+                        applyLiveTextVisibility()
+                        refreshStatusPresentation()
+                    }
+                    1 -> {
+                        val newValue = !areStatusBubblesEnabled()
+                        prefs.edit().putBoolean(PREF_STATUS_BUBBLES_ENABLED, newValue).apply()
+                        refreshStatusPresentation()
+                    }
+                    2 -> showInferenceModeSelector()
+                }
             }
-            .setPositiveButton("Apply") { _, _ ->
-                prefs.edit()
-                    .putBoolean(PREF_LIVE_TEXT_ENABLED, checked[0])
-                    .putBoolean(PREF_STATUS_BUBBLES_ENABLED, checked[1])
-                    .apply()
-                applyLiveTextVisibility()
-                refreshStatusPresentation()
-            }
-            .setNegativeButton("Cancel", null)
             .show()
     }
 
