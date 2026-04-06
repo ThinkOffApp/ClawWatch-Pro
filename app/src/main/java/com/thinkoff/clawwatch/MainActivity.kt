@@ -205,7 +205,20 @@ class MainActivity : AppCompatActivity() {
 
         // On-device Gemma agent (tier-1 handler)
         phoneAgent = PhoneAgent(this)
-        lifecycleScope.launch { phoneAgent.initialize() }
+        lifecycleScope.launch {
+            binding.gemmaStatusText.text = "Initializing Gemma..."
+            binding.gemmaModelInfo.text = ""
+            val success = phoneAgent.initialize()
+            if (success) {
+                binding.gemmaStatusText.text = "Gemma 4 E2B loaded and ready to respond"
+                binding.gemmaModelInfo.text = phoneAgent.getModelInfo()
+                binding.gemmaStatusText.setTextColor(0xFF4ADE80.toInt()) // green
+            } else {
+                binding.gemmaStatusText.text = "Gemma not available. Download Gemma 4 E2B in Google AI Edge Gallery, then restart."
+                binding.gemmaModelInfo.text = "Model not found"
+                binding.gemmaStatusText.setTextColor(0xFFEF4444.toInt()) // red
+            }
+        }
 
         // Watch relay for ClawWatch agent channel
         watchRelay = WatchRelay(this)

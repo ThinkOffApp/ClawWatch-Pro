@@ -535,6 +535,48 @@
                         android:text="Load room now"
                         android:textAllCaps="false" />
                 </LinearLayout>
+                <!-- Gemma Status Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:cardBackgroundColor="@color/bg_panel"
+                    app:cardCornerRadius="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="On-device AI"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/gemmaStatusText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Checking Gemma status..."
+                            android:textColor="#9CA3AF"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/gemmaModelInfo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text=""
+                            android:textColor="#FFFFFF"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
