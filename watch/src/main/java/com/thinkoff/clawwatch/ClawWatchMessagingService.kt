@@ -39,15 +39,28 @@ class ClawWatchMessagingService : FirebaseMessagingService() {
             return
         }
 
+        // Gate alert delivery on UIK derived intent state. This runs on the
+        // FirebaseMessagingService worker thread with a 3s budget; it falls
+        // back to FULL alert if the intent lookup fails for any reason.
+        val alertMode = WatchIntentAdapter.fetchAlertModeBlocking(
+            this,
+            SecurePrefs.watch(this)
+        )
+        if (alertMode == WatchIntentAdapter.AlertMode.SILENT) {
+            Log.i(TAG, "Urgent alert suppressed by UIK urgency=emergency-only. eventId=$eventId")
+            return
+        }
+
         UrgentAlertNotifier.show(
             context = this,
             eventId = eventId,
             title = title,
             body = body,
             room = room,
-            prompt = prompt
+            prompt = prompt,
+            alertMode = alertMode
         )
-        Log.i(TAG, "Urgent alert posted. eventId=$eventId room=${room ?: "-"}")
+        Log.i(TAG, "Urgent alert posted. eventId=$eventId room=${room ?: "-"} mode=$alertMode")
     }
 
     private fun shouldAlert(data: Map<String, String>, title: String, body: String): Boolean {

@@ -4,8 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.util.Log
+
+// imports used by the blocking companion helper
 import androidx.lifecycle.LifecycleCoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -30,7 +35,53 @@ class WatchIntentAdapter(
         private const val PREF_INTENT_USER_ID = "intent_user_id"
         private const val PREF_INTENT_DEVICE_ID = "intent_device_id"
         private const val BATTERY_DELTA_THRESHOLD = 5
+        private const val HEARTBEAT_INTERVAL_MS = 30_000L
+
+        /**
+         * Blocking helper for services (FirebaseMessagingService etc.) that
+         * don't carry a LifecycleCoroutineScope. Performs a short GET
+         * /intent/{userId} with a 3s budget and returns the computed
+         * AlertMode. Falls back to FULL on any error so we never drop an
+         * urgent alert because the intent lookup was flaky.
+         */
+        fun fetchAlertModeBlocking(@Suppress("UNUSED_PARAMETER") context: Context, prefs: SharedPreferences): AlertMode {
+            val baseUrl = (prefs.getString(PREF_INTENT_BASE_URL, null)?.trim()?.trimEnd('/')
+                ?: DEFAULT_BASE_URL)
+            val apiKey = prefs.getString(PREF_ANTFARM_API_KEY, null)?.trim().orEmpty()
+            val userId = prefs.getString(PREF_INTENT_USER_ID, null)?.trim()
+            if (apiKey.isBlank() || userId.isNullOrBlank()) return AlertMode.FULL
+
+            return try {
+                val url = URL("$baseUrl/intent/$userId")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 3_000
+                    readTimeout = 3_000
+                    setRequestProperty("X-API-Key", apiKey)
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    conn.disconnect()
+                    return AlertMode.FULL
+                }
+                val raw = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+                val derived = JSONObject(raw).optJSONObject("derived") ?: return AlertMode.FULL
+                val urgency = derived.optString("urgency_mode", "normal")
+                val suppressAudio = derived.optBoolean("suppress_audio", false)
+                when {
+                    urgency == "emergency-only" -> AlertMode.SILENT
+                    urgency == "text-only" || suppressAudio -> AlertMode.TEXT_ONLY
+                    else -> AlertMode.FULL
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "fetchAlertModeBlocking failed: ${e.message}")
+                AlertMode.FULL
+            }
+        }
     }
+
+    enum class AlertMode { FULL, TEXT_ONLY, SILENT }
 
     @Volatile private var cachedUserId: String? = null
     @Volatile private var cachedDeviceId: String? = null
@@ -39,6 +90,9 @@ class WatchIntentAdapter(
     @Volatile private var currentBatteryPct: Int = 100
     @Volatile private var currentLowBattery: Boolean = false
     @Volatile private var lastPublishedSnapshot: Snapshot? = null
+    @Volatile private var cachedDerived: JSONObject? = null
+    @Volatile private var cachedDerivedAtMs: Long = 0L
+    private var heartbeatJob: Job? = null
 
     private data class Snapshot(
         val state: String,
@@ -63,9 +117,69 @@ class WatchIntentAdapter(
             resolveIdentityIfNeeded()
             publishState(force = true)
         }
+        startHeartbeat()
     }
 
-    fun stop() = Unit
+    private fun startHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                if (!isConfigured()) continue
+                try {
+                    resolveIdentityIfNeeded()
+                    // force=true so the device slot TTL is refreshed even when
+                    // there are no state changes, matching uik-daemon 0.2.2.
+                    publishState(force = true)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Heartbeat publish failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun stop() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
+    /**
+     * Fetch the derived intent state for this user and decide how an urgent
+     * alert should be delivered on the watch. Caches the derived block for
+     * 30s so this can be called on every incoming notification without
+     * hammering the API.
+     */
+    suspend fun alertMode(): AlertMode {
+        val derived = getDerived() ?: return AlertMode.FULL
+        val urgency = derived.optString("urgency_mode", "normal")
+        val suppressAudio = derived.optBoolean("suppress_audio", false)
+        return when {
+            urgency == "emergency-only" -> AlertMode.SILENT
+            urgency == "text-only" || suppressAudio -> AlertMode.TEXT_ONLY
+            else -> AlertMode.FULL
+        }
+    }
+
+    private fun getDerived(): JSONObject? {
+        val now = System.currentTimeMillis()
+        val cached = cachedDerived
+        if (cached != null && now - cachedDerivedAtMs < HEARTBEAT_INTERVAL_MS) return cached
+
+        resolveIdentityIfNeeded()
+        val userId = cachedUserId ?: return cached
+        if (apiKey().isBlank()) return cached
+
+        return try {
+            val json = request(method = "GET", path = "/intent/$userId", body = null) ?: return cached
+            val derived = json.optJSONObject("derived") ?: return cached
+            cachedDerived = derived
+            cachedDerivedAtMs = now
+            derived
+        } catch (e: Exception) {
+            Log.w(TAG, "getDerived failed: ${e.message}")
+            cached
+        }
+    }
 
     fun onStateChanged(
         state: String,

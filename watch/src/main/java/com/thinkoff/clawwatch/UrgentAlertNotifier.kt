@@ -19,7 +19,8 @@ object UrgentAlertNotifier {
         title: String,
         body: String,
         room: String?,
-        prompt: String?
+        prompt: String?,
+        alertMode: WatchIntentAdapter.AlertMode = WatchIntentAdapter.AlertMode.FULL
     ) {
         createChannel(context)
 
@@ -42,17 +43,29 @@ object UrgentAlertNotifier {
 
         val contentText = if (!room.isNullOrBlank()) "[$room] $body" else body
 
-        val notification = NotificationCompat.Builder(context, AlertContract.CHANNEL_URGENT_ALERTS)
+        // Respect UIK-derived alert mode. TEXT_ONLY downgrades priority and
+        // mutes vibration + sound so the watch shows the text card without a
+        // buzz (e.g. user is in a meeting). FULL keeps the original behavior.
+        val textOnly = alertMode == WatchIntentAdapter.AlertMode.TEXT_ONLY
+        val priority = if (textOnly) NotificationCompat.PRIORITY_DEFAULT else NotificationCompat.PRIORITY_HIGH
+
+        val builder = NotificationCompat.Builder(context, AlertContract.CHANNEL_URGENT_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title.ifBlank { "ClawWatch urgent alert" })
             .setContentText(contentText.ifBlank { "Open ClawWatch for details." })
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(priority)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setGroup(NOTIFICATION_GROUP)
             .setContentIntent(pendingIntent)
-            .build()
+
+        if (textOnly) {
+            builder.setSilent(true)
+            builder.setVibrate(longArrayOf(0L))
+        }
+
+        val notification = builder.build()
 
         NotificationManagerCompat.from(context).notify(eventId.hashCode(), notification)
     }
