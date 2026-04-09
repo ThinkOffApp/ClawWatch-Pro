@@ -148,6 +148,12 @@ class MainActivity : AppCompatActivity() {
         runVitalsCommand(pending.type, pending.token)
     }
 
+    private val requestHealthConnect = registerForActivityResult(
+        androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        Log.i(TAG, "Health Connect permissions granted: $granted")
+    }
+
     private val avatarExpressions: Map<AvatarType, Map<AvatarState, String>> = mapOf(
         AvatarType.ANT to mapOf(
             AvatarState.IDLE to "🐜",
@@ -255,6 +261,7 @@ class MainActivity : AppCompatActivity() {
         setupAvatarSwipeSwitch()
         applyDayPhaseAppearance(dayPhaseManager.snapshotNow())
         ensureNotificationPermission()
+        ensureHealthConnectPermissions()
         handleAlertOpenIntent(intent)
 
         lifecycleScope.launch {
@@ -422,6 +429,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
         requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun ensureHealthConnectPermissions() {
+        val hcm = clawRunner.healthConnectManager
+        if (!hcm.isAvailable()) return
+        lifecycleScope.launch {
+            if (!hcm.hasAllPermissions()) {
+                requestHealthConnect.launch(hcm.permissions)
+            }
+        }
     }
 
     private fun handleAlertOpenIntent(intent: Intent?) {

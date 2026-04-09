@@ -41,6 +41,12 @@ class ConfigSyncService : WearableListenerService() {
                             ?.let { runner.saveApiKey(it) }
                         json.optString("brave_key").takeIf { it.isNotBlank() }
                             ?.let { runner.saveBraveKey(it) }
+                        json.optString("tavily_key").takeIf { it.isNotBlank() }
+                            ?.let { runner.saveTavilyKey(it) }
+                        json.optString("antfarm_key").takeIf { it.isNotBlank() }
+                            ?.let { runner.saveAntFarmKey(it) }
+                        json.optString("antfarm_rooms").takeIf { it.isNotBlank() }
+                            ?.let { runner.saveAntFarmRooms(it) }
                         json.optString("model").takeIf { it.isNotBlank() }
                             ?.let { runner.saveModel(it) }
                         json.optString("system_prompt").takeIf { it.isNotBlank() }

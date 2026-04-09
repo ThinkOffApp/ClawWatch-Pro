@@ -98,12 +98,12 @@ class ClawRunner(private val context: Context) {
     @Volatile
     private var conversationConfigFingerprint: String? = null
 
-    private val healthConnect = HealthConnectManager(context)
+    val healthConnectManager = HealthConnectManager(context)
 
     private suspend fun augmentSystemPromptWithHealth(base: String): String {
         return try {
-            if (healthConnect.isAvailable() && healthConnect.hasAllPermissions()) {
-                val stats = healthConnect.readRecentHealthData()
+            if (healthConnectManager.isAvailable() && healthConnectManager.hasAllPermissions()) {
+                val stats = healthConnectManager.readRecentHealthData()
                 base + "\n\nHealth Connect Stats: $stats"
             } else {
                 base
