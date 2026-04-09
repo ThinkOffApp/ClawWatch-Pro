@@ -36,7 +36,7 @@ data class AntFarmDirectThread(
 )
 
 class AntFarmClient(
-    private val baseUrl: String = "https://antfarm.world"
+    private val baseUrl: String = "https://groupmind.one"
 ) {
     companion object {
         private const val TAG = "AntFarmClient"

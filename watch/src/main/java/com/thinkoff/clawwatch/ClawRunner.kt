@@ -478,7 +478,7 @@ class ClawRunner(private val context: Context) {
 
             return@withContext try {
                 val encodedRoom = URLEncoder.encode(room, "UTF-8")
-                val url = URL("https://antfarm.world/api/v1/rooms/$encodedRoom/messages")
+                val url = URL("https://groupmind.one/api/v1/rooms/$encodedRoom/messages")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -547,7 +547,7 @@ class ClawRunner(private val context: Context) {
     private fun fetchRoomMessages(room: String, apiKey: String): List<FamilyMessage> {
         return try {
             val encodedRoom = URLEncoder.encode(room, "UTF-8")
-            val url = URL("https://antfarm.world/api/v1/rooms/$encodedRoom/messages?limit=6")
+            val url = URL("https://groupmind.one/api/v1/rooms/$encodedRoom/messages?limit=6")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.setRequestProperty("Accept", "application/json")

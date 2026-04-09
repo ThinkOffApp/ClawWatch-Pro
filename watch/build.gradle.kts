@@ -11,8 +11,8 @@ android {
         applicationId = "com.thinkoff.clawwatch"
         minSdk = 30
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0"
+        versionCode = 6
+        versionName = "0.3.0"
     }
 
     buildTypes {

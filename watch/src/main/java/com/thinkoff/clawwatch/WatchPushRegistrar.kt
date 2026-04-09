@@ -15,8 +15,8 @@ class WatchPushRegistrar(private val context: Context) {
     companion object {
         private const val TAG = "WatchPushRegistrar"
         private const val PREF_ANTFARM_KEY = "antfarm_api_key"
-        private const val ENDPOINT_AGENTS_ME = "https://antfarm.world/api/v1/agents/me"
-        private const val ENDPOINT_WATCH_DEVICES = "https://antfarm.world/api/v1/watch/devices"
+        private const val ENDPOINT_AGENTS_ME = "https://groupmind.one/api/v1/agents/me"
+        private const val ENDPOINT_WATCH_DEVICES = "https://groupmind.one/api/v1/watch/devices"
         private const val MIN_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6h
     }
 
