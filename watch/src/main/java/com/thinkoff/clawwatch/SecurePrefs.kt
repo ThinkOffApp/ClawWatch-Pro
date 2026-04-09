@@ -21,6 +21,8 @@ object SecurePrefs {
         "tavily_api_key",
         "antfarm_api_key",
         "antfarm_rooms",
+        "intent_user_id",
+        "intent_device_id",
         "model",
         "system_prompt",
         "max_tokens",

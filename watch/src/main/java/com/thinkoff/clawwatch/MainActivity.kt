@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dayPhaseManager: DayPhaseManager
     private lateinit var vitalsReader: VitalsReader
     private lateinit var watchPushRegistrar: WatchPushRegistrar
+    private lateinit var intentAdapter: WatchIntentAdapter
     private val prefs by lazy { SecurePrefs.watch(this) }
 
     private enum class State { SETUP, IDLE, LISTENING, THINKING, SEARCHING, SPEAKING, ERROR }
@@ -216,6 +217,7 @@ class MainActivity : AppCompatActivity() {
         dayPhaseManager = DayPhaseManager(this)
         vitalsReader = VitalsReader(this)
         watchPushRegistrar = WatchPushRegistrar(this)
+        intentAdapter = WatchIntentAdapter(this, prefs, lifecycleScope)
         phoneGemmaRelay = PhoneGemmaRelay(this)
         phoneGemmaRelay.start()
 
@@ -269,6 +271,15 @@ class MainActivity : AppCompatActivity() {
                 .syncRegistration(trigger = "app_start")
                 .onFailure { Log.w(TAG, "Push registration sync failed: ${it.message}") }
         }
+
+        // Start UIK intent heartbeat with current device state
+        val batteryPct = getBatteryPercentage()
+        intentAdapter.start(
+            initialState = "idle",
+            screenActive = true,
+            batteryPct = batteryPct,
+            lowBattery = batteryPct < 20
+        )
 
         lifecycleScope.launch { initialise() }
     }
@@ -1542,5 +1553,6 @@ class MainActivity : AppCompatActivity() {
         queryJob?.cancel()
         voiceEngine.release()
         phoneGemmaRelay.stop()
+        intentAdapter.stop()
     }
 }
