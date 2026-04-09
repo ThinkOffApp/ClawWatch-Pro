@@ -254,6 +254,8 @@ class MainActivity : AppCompatActivity() {
         watchRelay.setHistoryListener { history ->
             runOnUiThread {
                 if (activeTargetKind == TargetKind.WATCH) {
+                    // Don't overwrite local history with empty watch response
+                    if (history.isEmpty() && roomMessages.isNotEmpty()) return@runOnUiThread
                     // Merge watch history into phone display
                     val nickname = getCurrentNickname() ?: "You"
                     val existing = roomMessages.toList()
@@ -269,6 +271,7 @@ class MainActivity : AppCompatActivity() {
                     // Append any optimistic messages not yet in history
                     existing.filter { it.isUser && roomMessages.none { h -> h.body == it.body } }
                         .forEach { roomMessages += it }
+                    saveClawWatchHistory()
                     renderRoomMessages(forceScroll = true)
                 }
             }
@@ -297,6 +300,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTab(tab: Tab, animate: Boolean = true) {
         val previousTab = activeTab
+        if (previousTab == Tab.ROOM && activeTargetKind == TargetKind.WATCH) {
+            saveClawWatchHistory()
+        }
         activeTab = tab
         applyHeader()
         updateHeaderActions()

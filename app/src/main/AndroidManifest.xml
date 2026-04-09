@@ -13,17 +13,17 @@
         <package android:name="org.telegram.messenger" />
     </queries>
 
-    <!-- GPU access for on-device Gemma inference via LiteRT-LM -->
-    <uses-native-library android:name="libOpenCL.so" android:required="false" />
-    <uses-native-library android:name="libOpenCL-pixel.so" android:required="false" />
-    <uses-native-library android:name="libOpenCL_adreno.so" android:required="false" />
-
     <application
         android:allowBackup="false"
         android:label="ClawWatch"
         android:icon="@drawable/ic_clawwatch_launcher"
         android:roundIcon="@drawable/ic_clawwatch_launcher"
         android:theme="@style/Theme.ClawWatchPro">
+
+        <!-- GPU access for on-device Gemma inference via LiteRT-LM -->
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL-pixel.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL_adreno.so" android:required="false" />
 
         <activity
             android:name=".MainActivity"
