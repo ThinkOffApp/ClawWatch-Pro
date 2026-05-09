@@ -83,6 +83,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomLayoutManager: LinearLayoutManager
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
+    private val igStoryWatcher: InstagramStoryWatcher by lazy {
+        InstagramStoryWatcher(applicationContext)
+    }
     private var autoScrollEnabled = true
     private val PREF_CLAWWATCH_HISTORY = "clawwatch_chat_history"
     private var activeTab: Tab = Tab.ROOMS
@@ -291,11 +294,43 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         watchRelay.start()
         refreshRecentDirectChannels()
+        // IG story → GroupMind intent watcher. Idempotent start; runs
+        // a 10-min coroutine poll on lifecycleScope. Cancelled in
+        // onPause so we don't burn battery while user is in another
+        // app. (Phase 2 should move this to a foreground service for
+        // truly-background polling.)
+        igStoryWatcher.start(lifecycleScope)
     }
 
     override fun onPause() {
         super.onPause()
         watchRelay.stop()
+        igStoryWatcher.stop()
+    }
+
+    /**
+     * Handles the Instagram OAuth callback deep link
+     * `clawwatch://ig-oauth-callback?code=...`. The activity is
+     * `singleTop` + has the matching intent-filter, so re-entering
+     * the running app from the browser routes here instead of
+     * starting a fresh instance.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val data = intent.data ?: return
+        if (data.scheme == "clawwatch" && data.host == "ig-oauth-callback") {
+            lifecycleScope.launch {
+                val result = InstagramAuth.handleCallback(this@MainActivity, data)
+                val msg = if (result.isSuccess) {
+                    "Instagram connected"
+                } else {
+                    "Instagram connect failed: ${result.exceptionOrNull()?.message}"
+                }
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun showTab(tab: Tab, animate: Boolean = true) {
