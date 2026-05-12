@@ -32,8 +32,8 @@ import com.thinkoff.core.ui.SharedChatScreen
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val PREF_ANTFARM_KEY = "antfarm_api_key"
-        private const val PREF_ANTFARM_ROOMS = "antfarm_rooms"
+        private const val PREF_ANTFARM_KEY = "groupmind_api_key"
+        private const val PREF_ANTFARM_ROOMS = "groupmind_rooms"
         private const val PREF_HUMAN_EMAIL = "human_email"
         private const val PREF_HUMAN_DISPLAY_NAME = "human_display_name"
         private const val PREF_HUMAN_AVATAR_URL = "human_avatar_url"

@@ -19,7 +19,7 @@ import java.net.URL
  *   c) a dedicated /api/v1/intents endpoint
  *
  * Until then this writes to the same GroupMind room used by AntFarm
- * (room slug from SecurePrefs key "antfarm_room", default "thinkoff-development")
+ * (room slug from SecurePrefs key "groupmind_room", default "thinkoff-development")
  * with a tagged body so it's identifiable but doesn't break anything.
  * The exact endpoint is wrapped behind one method call so we can swap
  * it without touching the watcher.
@@ -29,8 +29,8 @@ object GroupMindIntentBridge {
 
     private const val DEFAULT_BASE = "https://groupmind.one/api/v1"
     private const val DEFAULT_ROOM = "thinkoff-development"
-    private const val PREF_API_KEY = "antfarm_api_key"
-    private const val PREF_ROOM = "antfarm_room"
+    private const val PREF_API_KEY = "groupmind_api_key"
+    private const val PREF_ROOM = "groupmind_room"
     private const val PREF_BASE_URL = "groupmind_base_url"
 
     /**
@@ -44,7 +44,7 @@ object GroupMindIntentBridge {
         val prefs = SecurePrefs.watch(context)
         val apiKey = prefs.getString(PREF_API_KEY, null)
         if (apiKey.isNullOrBlank()) {
-            Log.w(TAG, "antfarm_api_key missing — cannot publish intent")
+            Log.w(TAG, "groupmind_api_key missing - cannot publish intent")
             return@withContext false
         }
         val base = prefs.getString(PREF_BASE_URL, DEFAULT_BASE) ?: DEFAULT_BASE

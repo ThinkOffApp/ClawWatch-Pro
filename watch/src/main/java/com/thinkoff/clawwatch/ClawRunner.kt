@@ -37,8 +37,8 @@ class ClawRunner(private val context: Context) {
         private const val PREF_RAG_MODE = "rag_mode"         // "off" | "kotlin" | "always" | "opus_tool"
         private const val PREF_BRAVE_KEY = "brave_api_key"
         private const val PREF_TAVILY_KEY = "tavily_api_key"
-        private const val PREF_ANTFARM_KEY = "antfarm_api_key"
-        private const val PREF_ANTFARM_ROOMS = "antfarm_rooms"
+        private const val PREF_ANTFARM_KEY = "groupmind_api_key"
+        private const val PREF_ANTFARM_ROOMS = "groupmind_rooms"
         private const val DEFAULT_FAMILY_ROOMS = "thinkoff-development"
 
         // Keywords that suggest the query needs current/live information
