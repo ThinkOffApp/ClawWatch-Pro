@@ -428,6 +428,16 @@ class MainActivity : AppCompatActivity() {
                 setStatus("Tap to talk")
             }
         )
+
+        // Boot auto-monitor: chime once if rooms have a significant development.
+        // Silent (null) is the common path; significance gate defaults to NO.
+        lifecycleScope.launch {
+            val summary = clawRunner.autoMonitorRooms("startup") ?: return@launch
+            if (state != State.IDLE) return@launch
+            interactionToken++
+            binding.responseText.text = summary
+            speakLocalResponse(summary, interactionToken)
+        }
     }
 
     private fun onSaveKey() { /* key set via ADB, not on-watch */ }
@@ -920,6 +930,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         queryJob = lifecycleScope.launch {
+            val catchUp = clawRunner.catchUpIfIdle()
             val startMs = SystemClock.elapsedRealtime()
             val result = if (useGemma) {
                 phoneGemmaRelay.query(prompt)
@@ -931,9 +942,10 @@ class MainActivity : AppCompatActivity() {
             result.fold(
                 onSuccess = { response ->
                     if (token != interactionToken) return@fold
+                    val fullResponse = if (catchUp != null) "$catchUp\n\n$response" else response
                     val modeLabel = if (useGemma) "Gemma" else "Opus"
-                    val responseWithTiming = "$response\n[${modeLabel} ${elapsedMs}ms]"
-                    val plan = buildSpeechRenderPlan(response)
+                    val responseWithTiming = "$fullResponse\n[${modeLabel} ${elapsedMs}ms]"
+                    val plan = buildSpeechRenderPlan(fullResponse)
                     binding.responseText.text = responseWithTiming
                     setState(State.SPEAKING)
                     startSpeakingPreview(plan.previewText)

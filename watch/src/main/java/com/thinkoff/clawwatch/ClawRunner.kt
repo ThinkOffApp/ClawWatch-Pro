@@ -40,6 +40,10 @@ class ClawRunner(private val context: Context) {
         private const val PREF_ANTFARM_KEY = "groupmind_api_key"
         private const val PREF_ANTFARM_ROOMS = "groupmind_rooms"
         private const val DEFAULT_FAMILY_ROOMS = "thinkoff-development"
+        private const val PREF_LAST_USER_QUERY_TS_MS = "last_user_query_ts_ms"
+        private const val PREF_LAST_AUTOMONITOR_TS_MS = "last_automonitor_ts_ms"
+        private const val IDLE_THRESHOLD_MS = 60L * 60L * 1000L  // 1 hour
+        private const val AUTOMONITOR_MIN_GAP_MS = 5L * 60L * 1000L  // suppress more than once per 5 min
 
         // Keywords that suggest the query needs current/live information
         private val LIVE_INFO_KEYWORDS = setOf(
@@ -463,6 +467,83 @@ class ClawRunner(private val context: Context) {
             onSuccess = { Result.success(it) },
             onFailure = { Result.success(buildFallbackFamilySummary(recentMessages)) }
         )
+    }
+
+    fun touchUserQuery() {
+        prefs.edit().putLong(PREF_LAST_USER_QUERY_TS_MS, System.currentTimeMillis()).apply()
+    }
+
+    private fun lastUserQueryAgeMs(): Long {
+        val ts = prefs.getLong(PREF_LAST_USER_QUERY_TS_MS, 0L)
+        return if (ts == 0L) Long.MAX_VALUE else System.currentTimeMillis() - ts
+    }
+
+    private fun lastAutoMonitorAgeMs(): Long {
+        val ts = prefs.getLong(PREF_LAST_AUTOMONITOR_TS_MS, 0L)
+        return if (ts == 0L) Long.MAX_VALUE else System.currentTimeMillis() - ts
+    }
+
+    private fun markAutoMonitorRun() {
+        prefs.edit().putLong(PREF_LAST_AUTOMONITOR_TS_MS, System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * Run a one-shot room summary gated by an LLM significance judge.
+     * Returns a 1-sentence summary if rooms have significant developments worth surfacing on
+     * the watch, null otherwise. Honors a short cooldown so back-to-back calls don't burn tokens.
+     */
+    suspend fun autoMonitorRooms(reason: String): String? = withContext(Dispatchers.IO) {
+        if (lastAutoMonitorAgeMs() < AUTOMONITOR_MIN_GAP_MS) {
+            Log.i(TAG, "autoMonitorRooms($reason) suppressed by cooldown")
+            return@withContext null
+        }
+        val antFarmKey = getAntFarmKey() ?: return@withContext null
+        val apiKey = getApiKey() ?: return@withContext null
+        val rooms = getAntFarmRooms()
+        val recent = fetchRecentFamilyMessages(rooms, antFarmKey)
+        if (recent.isEmpty()) return@withContext null
+
+        markAutoMonitorRun()
+
+        val transcript = recent.joinToString("\n") { m ->
+            "[${m.room}] ${m.createdAt} ${m.from}: ${m.body}"
+        }
+        val judgePrompt = buildString {
+            append("Decide if the following recent room activity contains a significant development worth ")
+            append("surfacing as a watch notification. \"Significant\" means: a question directed at me, ")
+            append("a decision request, a service-down alert, or a clear new milestone. Idle chatter or routine ")
+            append("status updates are NOT significant.\n\n")
+            append("Reply with exactly one line in the format:\n")
+            append("YES: <one-sentence summary for the watch>\n")
+            append("or:\n")
+            append("NO\n\n")
+            append(transcript)
+        }
+        val judgement = callAnthropicMessages(
+            apiKey = apiKey,
+            model = getModel(),
+            maxTokens = 80,
+            systemPrompt = "You are a strict relevance filter for a watch notification. Default to NO when uncertain.",
+            userMessage = judgePrompt
+        ).getOrNull() ?: return@withContext null
+
+        val trimmed = judgement.trim()
+        return@withContext when {
+            trimmed.startsWith("YES:", ignoreCase = true) -> trimmed.removePrefix("YES:").trim().ifBlank { null }
+            else -> null
+        }
+    }
+
+    /**
+     * Convenience for the user-query path: if the user hasn't interacted in [IDLE_THRESHOLD_MS],
+     * run an auto-monitor and return a one-sentence catch-up prefix (or null). Always bumps
+     * the last-query timestamp so the next call sees a fresh idle window.
+     */
+    suspend fun catchUpIfIdle(): String? = withContext(Dispatchers.IO) {
+        val idle = lastUserQueryAgeMs() >= IDLE_THRESHOLD_MS
+        touchUserQuery()
+        if (!idle) return@withContext null
+        autoMonitorRooms("idle-resumed")
     }
 
     suspend fun postRoomMessage(message: String, requestedRoom: String? = null): Result<String> =
