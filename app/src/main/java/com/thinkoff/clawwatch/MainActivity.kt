@@ -362,6 +362,23 @@ class MainActivity : AppCompatActivity() {
                 setStatus("Tap to talk")
             }
         )
+
+        // Boot auto-monitor: if rooms have a significant development, chime once.
+        // Silent (null) means no notification — most boots stay quiet.
+        lifecycleScope.launch {
+            val summary = clawRunner.autoMonitorRooms("startup") ?: return@launch
+            if (state != State.IDLE) return@launch
+            binding.responseText.text = summary
+            setState(State.SPEAKING)
+            voiceEngine.speak(summary) {
+                runOnUiThread {
+                    if (state == State.SPEAKING) {
+                        setState(State.IDLE)
+                        setStatus("Tap to talk")
+                    }
+                }
+            }
+        }
     }
 
     private fun onSaveKey() { /* key set via ADB, not on-watch */ }
@@ -833,15 +850,21 @@ class MainActivity : AppCompatActivity() {
         setStatus(if (searchLikely) "Searching…" else "Thinking…")
 
         queryJob = lifecycleScope.launch {
+            val catchUp = clawRunner.catchUpIfIdle()
             val result = clawRunner.query(prompt)
             if (token != interactionToken) return@launch
             result.fold(
                 onSuccess = { response ->
                     if (token != interactionToken) return@fold
-                    binding.responseText.text = response
+                    val finalResponse = if (catchUp != null) {
+                        "$catchUp $response"
+                    } else {
+                        response
+                    }
+                    binding.responseText.text = finalResponse
                     setState(State.SPEAKING)
-                    startSpeakingPreview(response)
-                    voiceEngine.speak(response) {
+                    startSpeakingPreview(finalResponse)
+                    voiceEngine.speak(finalResponse) {
                         runOnUiThread {
                             if (token == interactionToken && state == State.SPEAKING) {
                                 startListening(autoWindow = true)
