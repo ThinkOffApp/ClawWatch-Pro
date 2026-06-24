@@ -32,8 +32,14 @@ data class HealthSnapshot(
     val hrvMs: Double? = null,
     val steps24h: Long = 0,
     val source: String = "health_connect",
+    val sourcePackage: String? = null,
     val generatedAtEpochMs: Long = System.currentTimeMillis(),
 ) {
+    /** "ok" once any real signal is present; "empty" otherwise. The watch uses
+     *  this to avoid clobbering a good snapshot with an empty one. */
+    fun status(): String =
+        if (sleepMinutes != null || lastHr != null || steps24h > 0) "ok" else "empty"
+
     fun summary(): String = buildString {
         if (sleepMinutes != null) append("sleep ${sleepMinutes / 60}h${sleepMinutes % 60}m, ")
         if (lastHr != null) append("last HR $lastHr, ")
@@ -44,6 +50,7 @@ data class HealthSnapshot(
 
     fun toJson(): String = JSONObject().apply {
         put("summary", summary())
+        put("status", status())
         sleepMinutes?.let { put("sleep_minutes", it) }
         lastSleepEndEpochMs?.let { put("last_sleep_end", it) }
         lastHr?.let { put("last_hr", it) }
@@ -51,6 +58,7 @@ data class HealthSnapshot(
         hrvMs?.let { put("hrv_ms", it) }
         put("steps_24h", steps24h)
         put("source", source)
+        sourcePackage?.let { put("source_package", it) }
         put("generated_at", generatedAtEpochMs)
     }.toString()
 }
@@ -130,24 +138,44 @@ class HealthConnectManager(private val context: Context) {
      *  unpermissioned, so callers can cleanly skip the sync. */
     suspend fun readHealthSnapshot(): HealthSnapshot? = withContext(Dispatchers.IO) {
         if (!isAvailable() || !hasAllPermissions()) return@withContext null
-        val endTime = Instant.now()
-        val startTime = endTime.minus(24, ChronoUnit.HOURS)
-        val range = TimeRangeFilter.between(startTime, endTime)
+        val now = Instant.now()
+        val dataRange = TimeRangeFilter.between(now.minus(24, ChronoUnit.HOURS), now)
+        // Sleep lands many hours back and Oura can sync a full night late, so use
+        // a wider window and pick the most recent session by end time explicitly.
+        val sleepRange = TimeRangeFilter.between(now.minus(48, ChronoUnit.HOURS), now)
         try {
             val steps = healthConnectClient
-                .readRecords(ReadRecordsRequest(recordType = StepsRecord::class, timeRangeFilter = range))
+                .readRecords(ReadRecordsRequest(recordType = StepsRecord::class, timeRangeFilter = dataRange))
                 .records.sumOf { it.count }
-            val lastHr = healthConnectClient
-                .readRecords(ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = range))
-                .records.lastOrNull()?.samples?.lastOrNull()?.beatsPerMinute
-            val lastSleep = healthConnectClient
-                .readRecords(ReadRecordsRequest(recordType = SleepSessionRecord::class, timeRangeFilter = range))
-                .records.lastOrNull()
+
+            val hrRecords = healthConnectClient
+                .readRecords(ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = dataRange))
+                .records
+            // Most recent individual sample by timestamp, not record/list order.
+            val lastHr = hrRecords.flatMap { it.samples }.maxByOrNull { it.time }?.beatsPerMinute
+
+            val sleepRecords = healthConnectClient
+                .readRecords(ReadRecordsRequest(recordType = SleepSessionRecord::class, timeRangeFilter = sleepRange))
+                .records
+            val lastSleep = sleepRecords.maxByOrNull { it.endTime }
+
+            // Which app wrote the data: prefer the sleep record's origin (Oura),
+            // else the latest HR record's. Label "oura" so the agent can trust it.
+            val originPkg = lastSleep?.metadata?.dataOrigin?.packageName
+                ?: hrRecords.maxByOrNull { it.endTime }?.metadata?.dataOrigin?.packageName
+            val sourceLabel = when {
+                originPkg == null -> "health_connect"
+                originPkg.contains("oura", ignoreCase = true) -> "oura"
+                else -> originPkg
+            }
+
             HealthSnapshot(
                 sleepMinutes = lastSleep?.let { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
                 lastSleepEndEpochMs = lastSleep?.endTime?.toEpochMilli(),
                 lastHr = lastHr,
                 steps24h = steps,
+                source = sourceLabel,
+                sourcePackage = originPkg,
             )
         } catch (e: Exception) {
             null

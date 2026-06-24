@@ -111,8 +111,14 @@ class ClawRunner(private val context: Context) {
         try {
             val phoneJson = prefs.getString(PREF_HEALTH_SNAPSHOT, null)
             if (!phoneJson.isNullOrBlank()) {
-                val summary = try { JSONObject(phoneJson).optString("summary") } catch (e: Exception) { "" }
-                if (summary.isNotBlank()) return base + "\n\nHealth (phone Oura via Health Connect): $summary"
+                val obj = try { JSONObject(phoneJson) } catch (e: Exception) { null }
+                val summary = obj?.optString("summary") ?: ""
+                if (summary.isNotBlank()) {
+                    val src = obj?.optString("source", "health_connect") ?: "health_connect"
+                    val label = if (src == "oura") "phone Oura via Health Connect"
+                                else "phone Health Connect ($src)"
+                    return base + "\n\nHealth ($label): $summary"
+                }
             }
         } catch (e: Exception) {
             // fall through to the watch-side read
@@ -140,8 +146,18 @@ class ClawRunner(private val context: Context) {
     fun saveSystemPrompt(prompt: String) = prefs.edit().putString(PREF_SYSTEM_PROMPT, prompt).apply()
     fun saveMaxTokens(n: Int) = prefs.edit().putInt(PREF_MAX_TOKENS, n).apply()
     fun saveRagMode(mode: String) = prefs.edit().putString(PREF_RAG_MODE, mode).apply()
-    /** Latest phone Health Connect snapshot (JSON), pushed over the Wear Data Layer. */
-    fun saveHealthSnapshot(json: String) = prefs.edit().putString(PREF_HEALTH_SNAPSHOT, json).apply()
+    /** Latest phone Health Connect snapshot (JSON), pushed over the Wear Data Layer.
+     *  Never let an empty/error snapshot clobber a previously good one. */
+    fun saveHealthSnapshot(json: String) {
+        val newStatus = try { JSONObject(json).optString("status", "ok") } catch (e: Exception) { "error" }
+        if (newStatus != "ok") {
+            val existing = prefs.getString(PREF_HEALTH_SNAPSHOT, null)
+            val existingOk = !existing.isNullOrBlank() &&
+                try { JSONObject(existing).optString("status", "ok") == "ok" } catch (e: Exception) { false }
+            if (existingOk) return  // keep the last good snapshot
+        }
+        prefs.edit().putString(PREF_HEALTH_SNAPSHOT, json).apply()
+    }
 
     fun hasApiKey(): Boolean = prefs.getString(PREF_API_KEY, null)?.isNotBlank() == true
     private fun getApiKey(): String? = prefs.getString(PREF_API_KEY, null)
