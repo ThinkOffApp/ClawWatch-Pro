@@ -20,9 +20,10 @@ class ConfigSyncService : WearableListenerService() {
 
     companion object {
         private const val TAG = "ConfigSyncService"
-        const val PATH_CONFIG   = "/clawwatch/config"
-        const val PATH_APIKEY   = "/clawwatch/apikey"
-        const val PATH_BRAVEKEY = "/clawwatch/bravekey"
+        const val PATH_CONFIG       = "/clawwatch/config"
+        const val PATH_APIKEY       = "/clawwatch/apikey"
+        const val PATH_BRAVEKEY     = "/clawwatch/bravekey"
+        const val PATH_HEALTH_STATE = "/clawwatch/health-state"
     }
 
     override fun onDataChanged(events: DataEventBuffer) {
@@ -58,6 +59,14 @@ class ConfigSyncService : WearableListenerService() {
                         Log.i(TAG, "All config synced from phone (single burst)")
                     } catch (e: Exception) {
                         Log.e(TAG, "Config sync burst error: ${e.message}")
+                    }
+                }
+                PATH_HEALTH_STATE -> {
+                    // Latest phone Health Connect snapshot (Oura sleep/HR/steps).
+                    val json = map.getString("health_json")
+                    if (!json.isNullOrBlank()) {
+                        runner.saveHealthSnapshot(json)
+                        Log.i(TAG, "Phone health snapshot synced to watch")
                     }
                 }
             }

@@ -83,6 +83,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomLayoutManager: LinearLayoutManager
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
+    // Reads Health Connect (where Oura writes) + pushes a typed snapshot to the
+    // watch over the Wear Data Layer. Best-effort; no-op without HC permission.
+    private val healthConnectManager by lazy { HealthConnectManager(this) }
     private val igStoryWatcher: InstagramStoryWatcher by lazy {
         InstagramStoryWatcher(applicationContext)
     }
@@ -293,6 +296,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         watchRelay.start()
+        // Push the latest Health Connect snapshot (Oura sleep/HR/steps) to the
+        // watch. Best-effort, no-op without HC permission; the UI permission +
+        // "sync now" card is a follow-up patch.
+        lifecycleScope.launch { runCatching { healthConnectManager.syncHealthToWatch() } }
         refreshRecentDirectChannels()
         // IG story → GroupMind intent watcher. Idempotent start; runs
         // a 10-min coroutine poll on lifecycleScope. Cancelled in

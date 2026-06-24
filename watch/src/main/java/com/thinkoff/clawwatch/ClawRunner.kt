@@ -39,6 +39,7 @@ class ClawRunner(private val context: Context) {
         private const val PREF_TAVILY_KEY = "tavily_api_key"
         private const val PREF_ANTFARM_KEY = "groupmind_api_key"
         private const val PREF_ANTFARM_ROOMS = "groupmind_rooms"
+        private const val PREF_HEALTH_SNAPSHOT = "phone_health_snapshot"  // JSON synced from phone Health Connect
         private const val DEFAULT_FAMILY_ROOMS = "thinkoff-development"
         private const val PREF_LAST_USER_QUERY_TS_MS = "last_user_query_ts_ms"
         private const val PREF_LAST_AUTOMONITOR_TS_MS = "last_automonitor_ts_ms"
@@ -105,6 +106,17 @@ class ClawRunner(private val context: Context) {
     val healthConnectManager = HealthConnectManager(context)
 
     private suspend fun augmentSystemPromptWithHealth(base: String): String {
+        // Prefer the phone-synced Health Connect snapshot (where Oura writes its
+        // sleep/HR/steps); fall back to the watch's own Health Connect read.
+        try {
+            val phoneJson = prefs.getString(PREF_HEALTH_SNAPSHOT, null)
+            if (!phoneJson.isNullOrBlank()) {
+                val summary = try { JSONObject(phoneJson).optString("summary") } catch (e: Exception) { "" }
+                if (summary.isNotBlank()) return base + "\n\nHealth (phone Oura via Health Connect): $summary"
+            }
+        } catch (e: Exception) {
+            // fall through to the watch-side read
+        }
         return try {
             if (healthConnectManager.isAvailable() && healthConnectManager.hasAllPermissions()) {
                 val stats = healthConnectManager.readRecentHealthData()
@@ -128,6 +140,8 @@ class ClawRunner(private val context: Context) {
     fun saveSystemPrompt(prompt: String) = prefs.edit().putString(PREF_SYSTEM_PROMPT, prompt).apply()
     fun saveMaxTokens(n: Int) = prefs.edit().putInt(PREF_MAX_TOKENS, n).apply()
     fun saveRagMode(mode: String) = prefs.edit().putString(PREF_RAG_MODE, mode).apply()
+    /** Latest phone Health Connect snapshot (JSON), pushed over the Wear Data Layer. */
+    fun saveHealthSnapshot(json: String) = prefs.edit().putString(PREF_HEALTH_SNAPSHOT, json).apply()
 
     fun hasApiKey(): Boolean = prefs.getString(PREF_API_KEY, null)?.isNotBlank() == true
     private fun getApiKey(): String? = prefs.getString(PREF_API_KEY, null)
