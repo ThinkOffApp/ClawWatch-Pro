@@ -37,12 +37,42 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
     private var avatarStateCallback: ((state: String, mood: String) -> Unit)? = null
     private var historyCallback: ((List<Pair<String, String>>) -> Unit)? = null
     private var phoneAgent: PhoneAgent? = null
+    private var ollamaAgent: OllamaAgent? = null
     private val gemmaScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
     )
 
     fun setPhoneAgent(agent: PhoneAgent) {
         phoneAgent = agent
+    }
+
+    /** Optional on-device Ollama brain (Bonsai). Preferred over Gemma when up. */
+    fun setOllamaAgent(agent: OllamaAgent) {
+        ollamaAgent = agent
+    }
+
+    /**
+     * Run a watch query on-device: Ollama (Bonsai) first when it's running,
+     * else Gemma (LiteRT). Both are fully on-device — no cloud.
+     */
+    private suspend fun runLocalInference(prompt: String): String {
+        val ollama = ollamaAgent
+        if (ollama != null && ollama.isAvailable()) {
+            when (val r = ollama.query(prompt)) {
+                is PhoneAgent.RouterResult.Answer -> return r.text
+                is PhoneAgent.RouterResult.Escalate ->
+                    android.util.Log.w("WatchRelay", "Ollama escalated (${r.reason}); falling back to Gemma")
+            }
+        }
+        val agent = phoneAgent
+        if (agent == null || !agent.isAvailable()) agent?.initialize()
+        if (agent == null || !agent.isAvailable()) {
+            return "No on-device model available. Start Ollama (Bonsai) or download Gemma 4 E2B in Google AI Edge Gallery."
+        }
+        return when (val result = agent.query(prompt)) {
+            is PhoneAgent.RouterResult.Answer -> result.text
+            is PhoneAgent.RouterResult.Escalate -> "Could not answer: ${result.reason}"
+        }
     }
 
     fun setHistoryListener(callback: (List<Pair<String, String>>) -> Unit) {
@@ -142,28 +172,14 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
                 }
             }
             PATH_GEMMA_QUERY -> {
-                // Watch explicitly asked for Gemma -- run inference directly
+                // Watch asked for an on-device answer -- run Bonsai (Ollama)
+                // first, Gemma as fallback. Both stay on the phone, no cloud.
                 val sourceNodeId = event.sourceNodeId
                 gemmaScope.launch {
-                    val agent = phoneAgent
-                    if (agent == null || !agent.isAvailable()) {
-                        agent?.initialize()
-                    }
                     val response = try {
-                        if (agent == null || !agent.isAvailable()) {
-                            "Gemma not available. Download Gemma 4 E2B in Google AI Edge Gallery."
-                        } else {
-                            val result = agent.query(data)
-                            when (result) {
-                                is PhoneAgent.RouterResult.Answer -> result.text
-                                is PhoneAgent.RouterResult.Escalate -> {
-                                    // Gemma failed to produce an answer
-                                    "Gemma could not answer: ${result.reason}"
-                                }
-                            }
-                        }
+                        runLocalInference(data)
                     } catch (e: Exception) {
-                        "Gemma error: ${e.message}"
+                        "On-device inference error: ${e.message}"
                     }
                     val payload = response.toByteArray(Charsets.UTF_8)
                     messageClient.sendMessage(sourceNodeId, PATH_GEMMA_RESPONSE, payload)

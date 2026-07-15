@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomLayoutManager: LinearLayoutManager
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
+    private lateinit var ollamaAgent: OllamaAgent
     // Reads Health Connect (where Oura writes) + pushes a typed snapshot to the
     // watch over the Wear Data Layer. Best-effort; no-op without HC permission.
     private val healthConnectManager by lazy { HealthConnectManager(this) }
@@ -209,14 +210,26 @@ class MainActivity : AppCompatActivity() {
             InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
 
-        // On-device Gemma agent (tier-1 handler)
+        // On-device brains: Ollama (Bonsai, primary when running) + Gemma
+        // (LiteRT, always-available fallback). Both run fully on-device.
         phoneAgent = PhoneAgent(this)
+        ollamaAgent = OllamaAgent(this)
         lifecycleScope.launch {
             binding.gemmaStatusText.text = "Initializing Gemma..."
             binding.gemmaModelInfo.text = ""
             binding.gemmaStatusChip.text = "Gemma loading..."
+            // Probe Ollama first — if Bonsai is up it becomes the primary brain.
+            val ollamaUp = try { ollamaAgent.isAvailable() } catch (_: Exception) { false }
+            if (ollamaUp) {
+                binding.gemmaStatusText.text = "${ollamaAgent.getModelInfo()} on-device, ready"
+                binding.gemmaModelInfo.text = ollamaAgent.getModelInfo()
+                binding.gemmaStatusText.setTextColor(0xFF4ADE80.toInt())
+                binding.gemmaStatusChip.text = "Bonsai ready"
+                binding.gemmaStatusChip.setTextColor(0xFF4ADE80.toInt())
+                binding.gemmaStatusDot.setBackgroundColor(0xFF4ADE80.toInt())
+            }
             val success = phoneAgent.initialize()
-            if (success) {
+            if (success && !ollamaUp) {
                 binding.gemmaStatusText.text = "Gemma 4 E2B loaded and ready to respond"
                 binding.gemmaModelInfo.text = phoneAgent.getModelInfo()
                 binding.gemmaStatusText.setTextColor(0xFF4ADE80.toInt())
@@ -224,7 +237,7 @@ class MainActivity : AppCompatActivity() {
                 binding.gemmaStatusChip.text = "Gemma 4 E2B ready"
                 binding.gemmaStatusChip.setTextColor(0xFF4ADE80.toInt())
                 binding.gemmaStatusDot.setBackgroundColor(0xFF4ADE80.toInt())
-            } else {
+            } else if (!success && !ollamaUp) {
                 binding.gemmaStatusText.text = "Gemma not available. Download Gemma 4 E2B in Google AI Edge Gallery, then restart."
                 binding.gemmaModelInfo.text = "Model not found"
                 binding.gemmaStatusText.setTextColor(0xFFEF4444.toInt())
@@ -237,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         // Watch relay for ClawWatch agent channel
         watchRelay = WatchRelay(this)
         watchRelay.setPhoneAgent(phoneAgent)
+        watchRelay.setOllamaAgent(ollamaAgent)
         watchRelay.setResponseListener { response ->
             runOnUiThread {
                 roomMessages += LocalMessage(
@@ -1261,6 +1275,10 @@ class MainActivity : AppCompatActivity() {
      * Bypasses the classifier and runs Gemma directly.
      */
     private suspend fun runGemmaFallback(prompt: String): String? {
+        // Prefer on-device Bonsai (Ollama) when it's running.
+        if (ollamaAgent.isAvailable()) {
+            (ollamaAgent.query(prompt) as? PhoneAgent.RouterResult.Answer)?.let { return it.text }
+        }
         if (!phoneAgent.isAvailable()) {
             phoneAgent.initialize()
         }

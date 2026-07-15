@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allow cleartext HTTP ONLY to the on-device Ollama server (localhost).
+     Everything else stays HTTPS-only. Ollama serves plain HTTP on
+     127.0.0.1:11434; the app runs on the same phone. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
