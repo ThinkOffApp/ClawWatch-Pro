@@ -12,8 +12,10 @@ wearable = "18.1.0"
 workRuntime = "2.9.0"
 coroutinesPlayServices = "1.8.1"
 firebaseMessaging = "24.1.0"
+billing = "7.1.1"
 
 [libraries]
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 wear = { group = "androidx.wear", name = "wear", version.ref = "wear" }
 wear-input = { group = "androidx.wear", name = "wear-input", version.ref = "wearInput" }
