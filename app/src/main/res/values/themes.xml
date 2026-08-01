@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.ClawWatchPro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Pinned DARK, deliberately: only one palette exists. DayNight with a
+         single palette is silently broken by construction (Material surfaces
+         follow the system while our text stays white — the exact bug petrus
+         hit in CodeWatch on e-ink, fixed there in CodeWatch PR #52). When a
+         light palette is authored, follow #52's shape: move this palette to
+         values-night/, author light in values/, switch parent back to
+         DayNight. -->
+    <style name="Theme.ClawWatchPro" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">@color/thinkoff_green</item>
         <item name="colorPrimaryVariant">@color/thinkoff_green_light</item>
         <item name="colorSecondary">@color/thinkoff_pink</item>
