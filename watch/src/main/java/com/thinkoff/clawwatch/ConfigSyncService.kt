@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import org.json.JSONObject
 
@@ -25,6 +26,26 @@ class ConfigSyncService : WearableListenerService() {
         const val PATH_BRAVEKEY = "/clawwatch/bravekey"
     }
 
+    /**
+     * Push BYOK presence (never the key) to all connected phones the moment
+     * a key lands here, so the phone's billing gate unlocks immediately
+     * instead of on the next query round-trip. See PhoneRelayService, which
+     * also refreshes this on every phone contact.
+     */
+    private fun broadcastByokStatus() {
+        val messageClient = Wearable.getMessageClient(applicationContext)
+        Wearable.getNodeClient(applicationContext).connectedNodes
+            .addOnSuccessListener { nodes ->
+                nodes.forEach { node ->
+                    messageClient.sendMessage(
+                        node.id,
+                        PhoneRelayService.PATH_BYOK_STATUS,
+                        "1".toByteArray(Charsets.UTF_8)
+                    )
+                }
+            }
+    }
+
     override fun onDataChanged(events: DataEventBuffer) {
         val runner = ClawRunner(applicationContext)
 
@@ -38,7 +59,10 @@ class ConfigSyncService : WearableListenerService() {
                     try {
                         val json = JSONObject(payload)
                         json.optString("api_key").takeIf { it.isNotBlank() }
-                            ?.let { runner.saveApiKey(it) }
+                            ?.let {
+                                runner.saveApiKey(it)
+                                broadcastByokStatus()
+                            }
                         json.optString("brave_key").takeIf { it.isNotBlank() }
                             ?.let { runner.saveBraveKey(it) }
                         json.optString("tavily_key").takeIf { it.isNotBlank() }

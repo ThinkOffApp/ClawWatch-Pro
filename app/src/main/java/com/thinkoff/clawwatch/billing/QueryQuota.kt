@@ -20,6 +20,16 @@ object QueryQuota {
     const val FREE_QUERIES = 3
     private const val PREF_USED = "managed_queries_used"
 
+    /**
+     * Written by WatchRelay when the watch reports BYOK presence over the
+     * Data Layer (/clawwatch/byok-status). The user's Anthropic key lives
+     * on the WATCH (ClawRunner's store — a different app, sandbox, and
+     * device than this one), so a phone-local key check alone would show
+     * a BYOK user a false paywall (claudemm's PR #4 review). The gate
+     * reads the merged view: key here OR key reported by the watch.
+     */
+    const val PREF_WATCH_BYOK = "watch_has_byok_key"
+
     sealed class Gate {
         object Byok : Gate()
         object Subscribed : Gate()
@@ -28,8 +38,12 @@ object QueryQuota {
     }
 
     fun gate(context: Context, subscribed: Boolean): Gate {
+        // Despite the name, SecurePrefs.watch() is THIS app's local
+        // encrypted store — the accessor predates the phone/watch split
+        // and each module has its own copy of SecurePrefs.
         val prefs = SecurePrefs.watch(context)
-        val byok = !prefs.getString("anthropic_api_key", null).isNullOrBlank()
+        val byok = !prefs.getString("anthropic_api_key", null).isNullOrBlank() ||
+            prefs.getBoolean(PREF_WATCH_BYOK, false)
         if (byok) return Gate.Byok
         if (subscribed) return Gate.Subscribed
         val used = prefs.getInt(PREF_USED, 0)

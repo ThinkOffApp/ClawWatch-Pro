@@ -28,11 +28,30 @@ class PhoneRelayService : WearableListenerService() {
         const val PATH_AVATAR_STATE = "/clawwatch/avatar-state"
         const val PATH_HISTORY_REQUEST = "/clawwatch/history-request"
         const val PATH_HISTORY_RESPONSE = "/clawwatch/history-response"
+        const val PATH_BYOK_STATUS = "/clawwatch/byok-status"
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * Tell the phone whether this watch holds a user-supplied Anthropic key.
+     * Status only ("1"/"0") — the key itself never crosses the Data Layer
+     * in this direction. The phone's billing gate (QueryQuota) needs this
+     * because BYOK truth lives here: the two modules are two apps on two
+     * devices with separate SecurePrefs stores, so a phone-local key check
+     * would show a false paywall to a BYOK user (claudemm's PR #4 review).
+     */
+    private fun sendByokStatus(nodeId: String) {
+        val hasKey = ClawRunner(applicationContext).hasApiKey()
+        Wearable.getMessageClient(applicationContext)
+            .sendMessage(nodeId, PATH_BYOK_STATUS, (if (hasKey) "1" else "0").toByteArray(Charsets.UTF_8))
+    }
+
     override fun onMessageReceived(event: MessageEvent) {
+        // Every phone contact refreshes BYOK status: the history request is
+        // the phone's connect handshake, and refreshing on each query keeps
+        // the gate current if a key landed on the watch between connects.
+        sendByokStatus(event.sourceNodeId)
         if (event.path == PATH_HISTORY_REQUEST) {
             // Phone is requesting conversation history
             val sourceNodeId = event.sourceNodeId
