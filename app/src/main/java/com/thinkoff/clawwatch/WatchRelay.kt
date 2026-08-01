@@ -5,6 +5,7 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.NodeClient
 import com.google.android.gms.wearable.Wearable
+import com.thinkoff.clawwatch.billing.QueryQuota
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,7 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
         const val PATH_GEMMA_RESPONSE = "/clawwatch/gemma-response"
         const val PATH_HISTORY_REQUEST = "/clawwatch/history-request"
         const val PATH_HISTORY_RESPONSE = "/clawwatch/history-response"
+        const val PATH_BYOK_STATUS = "/clawwatch/byok-status"
     }
 
     private val messageClient: MessageClient = Wearable.getMessageClient(context)
@@ -120,6 +122,15 @@ class WatchRelay(private val context: Context) : MessageClient.OnMessageReceived
         val data = String(event.data, Charsets.UTF_8)
         when (event.path) {
             PATH_RESPONSE -> responseCallback?.invoke(data)
+            PATH_BYOK_STATUS -> {
+                // Watch reports whether IT holds an Anthropic key (status
+                // only, never the key). Cached here so QueryQuota can gate
+                // on the merged cross-device view — the key usually lives
+                // on the watch, not in this app's store.
+                SecurePrefs.watch(context).edit()
+                    .putBoolean(QueryQuota.PREF_WATCH_BYOK, data == "1")
+                    .apply()
+            }
             PATH_AVATAR_STATE -> {
                 // Format: "STATE|MOOD" e.g. "SPEAKING|CHEERFUL"
                 val parts = data.split("|", limit = 2)

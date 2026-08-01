@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomLayoutManager: LinearLayoutManager
     private lateinit var watchRelay: WatchRelay
     private lateinit var phoneAgent: PhoneAgent
+    private lateinit var billing: com.thinkoff.clawwatch.billing.ClawBillingManager
     private val igStoryWatcher: InstagramStoryWatcher by lazy {
         InstagramStoryWatcher(applicationContext)
     }
@@ -208,6 +209,7 @@ class MainActivity : AppCompatActivity() {
 
         // On-device Gemma agent (tier-1 handler)
         phoneAgent = PhoneAgent(this)
+        billing = com.thinkoff.clawwatch.billing.ClawBillingManager(this).also { it.connect() }
         lifecycleScope.launch {
             binding.gemmaStatusText.text = "Initializing Gemma..."
             binding.gemmaModelInfo.text = ""
@@ -699,6 +701,23 @@ class MainActivity : AppCompatActivity() {
 
         // Watch channel bypasses room auth requirements
         if (targetKind == TargetKind.WATCH) {
+            // Billing gate (flag-off until the managed backend + Play product
+            // exist; Phase 3 flips billing_enabled). BYOK and subscribers pass
+            // untouched; free-tier users burn one of their 3 managed queries;
+            // an exhausted quota raises the paywall instead of dispatching.
+            if (prefs.getBoolean("billing_enabled", false)) {
+                when (val gate = com.thinkoff.clawwatch.billing.QueryQuota.gate(this, billing.subscribed.value)) {
+                    is com.thinkoff.clawwatch.billing.QueryQuota.Gate.Paywall -> {
+                        com.thinkoff.clawwatch.billing.PaywallDialog.show(this, billing)
+                        return
+                    }
+                    is com.thinkoff.clawwatch.billing.QueryQuota.Gate.Free -> {
+                        com.thinkoff.clawwatch.billing.QueryQuota.recordManagedQuery(this)
+                        Toast.makeText(this, "Free query ${com.thinkoff.clawwatch.billing.QueryQuota.FREE_QUERIES - gate.remaining + 1} of ${com.thinkoff.clawwatch.billing.QueryQuota.FREE_QUERIES}", Toast.LENGTH_SHORT).show()
+                    }
+                    else -> { /* Byok or Subscribed: unmetered */ }
+                }
+            }
             autoScrollEnabled = true
             roomMessages += LocalMessage(
                 author = getCurrentNickname() ?: "You",
